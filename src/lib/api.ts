@@ -4,6 +4,9 @@ export const api = axios.create({
   baseURL: process.env.NEXT_PUBLIC_API_URL,
 });
 
+// API 기본 URL (환경변수가 없을 경우 기본값 사용)
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "https://portfolio-fitspec.onrender.com";
+
 // 로그인 API
 export interface LoginRequest {
   email: string;

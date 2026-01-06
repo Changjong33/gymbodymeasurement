@@ -4,7 +4,7 @@ import { useState, FormEvent, useEffect } from "react";
 import { useMemberStore, Member } from "@/store/memberStore";
 import { useAuthStore } from "@/store/authStore";
 import { useRouter } from "next/navigation";
-import { getMembersApi } from "@/lib/api";
+import { getMembersApi, updateMemberApi, deleteMemberApi } from "@/lib/api";
 
 export default function ListPage() {
   const router = useRouter();
@@ -34,82 +34,103 @@ export default function ListPage() {
     }
   }, [isLoggedIn, devMode, router]);
 
+  // 회원 목록 조회 함수
+  const fetchMembers = async () => {
+    if (!isLoggedIn && !devMode) return;
+    
+    setIsLoading(true);
+    try {
+      // gymId는 일단 1로 설정 (추후 로그인한 gym의 ID로 변경 가능)
+      const gymId = 1;
+      const response = await getMembersApi(gymId);
+      
+      console.log("회원 목록 조회 응답:", response);
+      
+      // 응답 구조에 따라 배열 추출
+      let membersArray: any[] = [];
+      
+      // response.data가 배열인 경우 (NestJS 표준 응답 형식)
+      if (response.data && Array.isArray(response.data)) {
+        membersArray = response.data;
+      }
+      // response.members가 배열인 경우
+      else if (response.members && Array.isArray(response.members)) {
+        membersArray = response.members;
+      }
+      // response 자체가 배열인 경우
+      else if (Array.isArray(response)) {
+        membersArray = response;
+      }
+      
+      // 백엔드 응답을 프론트엔드 Member 형식으로 변환
+      if (Array.isArray(membersArray)) {
+        const convertedMembers: Member[] = membersArray.map((member: any) => {
+          // height와 weight가 문자열일 수 있으므로 숫자로 변환
+          const height = typeof member.height === 'string' 
+            ? parseFloat(member.height) 
+            : (member.height || 0);
+          const weight = typeof member.weight === 'string' 
+            ? parseFloat(member.weight) 
+            : (member.weight || 0);
+          
+          return {
+            id: member.id?.toString() || `member_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+            name: member.name || "",
+            gender: member.gender === "M" ? "male" : "female",
+            age: typeof member.age === 'number' ? member.age : parseInt(member.age || "0", 10),
+            height: height,
+            weight: weight,
+            notes: member.notes || undefined,
+            createdAt: member.createdAt 
+              ? (typeof member.createdAt === 'string' ? member.createdAt : new Date(member.createdAt).toISOString())
+              : new Date().toISOString(),
+          };
+        });
+        setMembers(convertedMembers);
+      } else {
+        console.warn("회원 목록이 배열이 아닙니다:", response);
+        setMembers([]);
+      }
+    } catch (error) {
+      console.error("회원 목록 조회 실패:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   // 회원 목록 조회
   useEffect(() => {
-    const fetchMembers = async () => {
-      if (!isLoggedIn && !devMode) return;
-      
-      setIsLoading(true);
-      try {
-        // gymId는 일단 1로 설정 (추후 로그인한 gym의 ID로 변경 가능)
-        const gymId = 1;
-        const response = await getMembersApi(gymId);
-        
-        console.log("회원 목록 조회 응답:", response);
-        
-        // 응답 구조에 따라 배열 추출
-        let membersArray: any[] = [];
-        
-        // response.data가 배열인 경우 (NestJS 표준 응답 형식)
-        if (response.data && Array.isArray(response.data)) {
-          membersArray = response.data;
-        }
-        // response.members가 배열인 경우
-        else if (response.members && Array.isArray(response.members)) {
-          membersArray = response.members;
-        }
-        // response 자체가 배열인 경우
-        else if (Array.isArray(response)) {
-          membersArray = response;
-        }
-        
-        // 백엔드 응답을 프론트엔드 Member 형식으로 변환
-        if (Array.isArray(membersArray)) {
-          const convertedMembers: Member[] = membersArray.map((member: any) => {
-            // height와 weight가 문자열일 수 있으므로 숫자로 변환
-            const height = typeof member.height === 'string' 
-              ? parseFloat(member.height) 
-              : (member.height || 0);
-            const weight = typeof member.weight === 'string' 
-              ? parseFloat(member.weight) 
-              : (member.weight || 0);
-            
-            return {
-              id: member.id?.toString() || `member_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-              name: member.name || "",
-              gender: member.gender === "M" ? "male" : "female",
-              age: typeof member.age === 'number' ? member.age : parseInt(member.age || "0", 10),
-              height: height,
-              weight: weight,
-              notes: member.notes || undefined,
-              createdAt: member.createdAt 
-                ? (typeof member.createdAt === 'string' ? member.createdAt : new Date(member.createdAt).toISOString())
-                : new Date().toISOString(),
-            };
-          });
-          setMembers(convertedMembers);
-        } else {
-          console.warn("회원 목록이 배열이 아닙니다:", response);
-          setMembers([]);
-        }
-      } catch (error) {
-        console.error("회원 목록 조회 실패:", error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
     fetchMembers();
-  }, [isLoggedIn, devMode, setMembers]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isLoggedIn, devMode]);
 
   // 로그인하지 않은 경우 아무것도 렌더링하지 않음 (개발 모드 제외)
   if (!isLoggedIn && !devMode) {
     return null;
   }
 
-  const handleDelete = (id: string, name: string) => {
-    if (confirm(`${name} 회원의 정보를 삭제하시겠습니까?`)) {
-      removeMember(id);
+  const handleDelete = async (id: string, name: string) => {
+    if (!confirm(`${name} 회원의 정보를 삭제하시겠습니까?`)) {
+      return;
+    }
+
+    try {
+      // 백엔드에서 숫자 ID 추출 (id가 "member_xxx" 형식일 수도 있으므로)
+      const numericId = id.includes("member_") ? null : parseInt(id, 10);
+      
+      if (numericId && !isNaN(numericId)) {
+        await deleteMemberApi(numericId);
+        console.log("회원 삭제 성공");
+      } else {
+        // 로컬 스토어에서만 삭제 (백엔드에 없는 데이터)
+        removeMember(id);
+      }
+      
+      // 목록 다시 불러오기
+      await fetchMembers();
+    } catch (error: any) {
+      console.error("회원 삭제 실패:", error);
+      alert(`회원 삭제 중 오류가 발생했습니다: ${error.response?.data?.message || error.message}`);
     }
   };
 
@@ -144,49 +165,97 @@ export default function ListPage() {
     });
   };
 
-  const handleUpdate = (e: FormEvent<HTMLFormElement>) => {
+  const handleUpdate = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!editingMember) return;
 
     setIsSubmitting(true);
 
-    const formData = new FormData(e.currentTarget);
-    const name = formData.get("name") as string;
-    const gender = formData.get("gender") as "male" | "female";
-    const age = parseInt(formData.get("age") as string);
-    const height = parseFloat(formData.get("height") as string);
-    const weight = parseFloat(formData.get("weight") as string);
+    try {
+      const formData = new FormData(e.currentTarget);
+      const name = formData.get("name") as string;
+      const gender = formData.get("gender") as "male" | "female";
+      const ageStr = formData.get("age") as string;
+      const heightStr = formData.get("height") as string;
+      const weightStr = formData.get("weight") as string;
 
-    // 유효성 검사
-    if (!name || !gender || !age || !height || !weight) {
-      alert("모든 필드를 입력해주세요.");
+      // 유효성 검사
+      if (!name || !gender || !ageStr || !heightStr || !weightStr) {
+        alert("모든 필드를 입력해주세요.");
+        setIsSubmitting(false);
+        return;
+      }
+
+      const age = parseInt(ageStr, 10);
+      const height = parseFloat(heightStr);
+      const weight = parseFloat(weightStr);
+
+      if (isNaN(age) || isNaN(height) || isNaN(weight)) {
+        alert("나이, 키, 몸무게는 올바른 숫자여야 합니다.");
+        setIsSubmitting(false);
+        return;
+      }
+
+      if (age <= 0 || age > 150) {
+        alert("나이는 1 이상 150 이하여야 합니다.");
+        setIsSubmitting(false);
+        return;
+      }
+
+      if (height <= 0 || weight <= 0) {
+        alert("나이, 키, 몸무게는 0보다 큰 값을 입력해주세요.");
+        setIsSubmitting(false);
+        return;
+      }
+
+      // 부상 부위를 notes로 변환 (선택사항)
+      const notes = injuries.length > 0 ? injuries.join(", ") : undefined;
+
+      // gender 변환: "male" -> "M", "female" -> "F"
+      const genderCode: "M" | "F" = gender === "male" ? "M" : "F";
+
+      // 백엔드에서 숫자 ID 추출
+      const numericId = editingMember.id.includes("member_") ? null : parseInt(editingMember.id, 10);
+
+      if (numericId && !isNaN(numericId)) {
+        // 백엔드 API 호출
+        const updateData = {
+          name: name.trim(),
+          gender: genderCode,
+          age: age,
+          height: Number(height.toFixed(1)),
+          weight: Number(weight.toFixed(1)),
+          notes: notes || undefined,
+        };
+
+        await updateMemberApi(numericId, updateData);
+        console.log("회원 수정 성공");
+      } else {
+        // 로컬 스토어에서만 업데이트 (백엔드에 없는 데이터)
+        updateMember(editingMember.id, {
+          name,
+          gender,
+          age,
+          height,
+          weight,
+          notes,
+        });
+      }
+
+      // 목록 다시 불러오기
+      await fetchMembers();
+
+      // 모달 닫기
+      setEditingMember(null);
+      setInjuries([]);
+      setShowInjuryToggle(false);
+      setShowMoreInjuries(false);
+    } catch (error: any) {
+      console.error("회원 수정 실패:", error);
+      alert(`회원 수정 중 오류가 발생했습니다: ${error.response?.data?.message || error.message}`);
+    } finally {
       setIsSubmitting(false);
-      return;
     }
-
-    if (age <= 0 || height <= 0 || weight <= 0) {
-      alert("나이, 키, 몸무게는 0보다 큰 값을 입력해주세요.");
-      setIsSubmitting(false);
-      return;
-    }
-
-    // 부상 부위를 notes로 변환 (선택사항)
-    const notes = injuries.length > 0 ? injuries.join(", ") : undefined;
-
-    updateMember(editingMember.id, {
-      name,
-      gender,
-      age,
-      height,
-      weight,
-      notes,
-    });
-
-    setIsSubmitting(false);
-    setEditingMember(null);
-    setInjuries([]);
-    setShowInjuryToggle(false);
-    setShowMoreInjuries(false);
   };
 
   const handleExport = () => {

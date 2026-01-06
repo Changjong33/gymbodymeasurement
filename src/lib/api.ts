@@ -147,3 +147,61 @@ export const getMembersApi = async (gymId?: number): Promise<GetMembersResponse>
   const response = await axios.get<GetMembersResponse>(url);
   return response.data;
 };
+
+// 회원 수정 API
+export interface UpdateMemberRequest {
+  gymId?: number;
+  name?: string;
+  gender?: "M" | "F";
+  age?: number;
+  height?: number;
+  weight?: number;
+  notes?: string;
+}
+
+export const updateMemberApi = async (id: string | number, data: UpdateMemberRequest): Promise<MemberResponse> => {
+  const requestBody: any = {};
+
+  if (data.gymId !== undefined) requestBody.gymId = Number(data.gymId);
+  if (data.name !== undefined) requestBody.name = String(data.name).trim();
+  if (data.gender !== undefined) requestBody.gender = String(data.gender);
+  if (data.age !== undefined) requestBody.age = Number(data.age);
+  if (data.height !== undefined) requestBody.height = Number(data.height);
+  if (data.weight !== undefined) requestBody.weight = Number(data.weight);
+  if (data.notes !== undefined) {
+    requestBody.notes = data.notes && data.notes.trim() ? String(data.notes).trim() : null;
+  }
+
+  try {
+    const response = await axios.patch<MemberResponse>(`${API_BASE_URL}/members/${id}`, requestBody, {
+      headers: {
+        "Content-Type": "application/json",
+      },
+    });
+    return response.data;
+  } catch (error: any) {
+    console.error("=== 회원 수정 API 호출 실패 ===");
+    console.error("Error:", error);
+    console.error("Error Response Data:", error.response?.data);
+    throw error;
+  }
+};
+
+// 회원 삭제 API
+export interface DeleteMemberResponse {
+  message?: string;
+  statusCode?: number;
+  timestamp?: string;
+}
+
+export const deleteMemberApi = async (id: string | number): Promise<DeleteMemberResponse> => {
+  try {
+    const response = await axios.delete<DeleteMemberResponse>(`${API_BASE_URL}/members/${id}`);
+    return response.data;
+  } catch (error: any) {
+    console.error("=== 회원 삭제 API 호출 실패 ===");
+    console.error("Error:", error);
+    console.error("Error Response Data:", error.response?.data);
+    throw error;
+  }
+};

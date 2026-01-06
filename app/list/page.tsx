@@ -118,10 +118,13 @@ export default function ListPage() {
     // 기존 특이사항을 배열로 변환
     if (member.notes) {
       setInjuries(member.notes.split(", "));
+      // 특이사항이 있으면 바로 체크박스 표시
+      setShowInjuryToggle(true);
     } else {
       setInjuries([]);
+      // 특이사항이 없으면 "+ 추가하기" 버튼 표시
+      setShowInjuryToggle(false);
     }
-    setShowInjuryToggle(false);
   };
 
   const handleCloseModal = () => {

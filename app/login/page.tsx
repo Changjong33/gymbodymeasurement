@@ -62,13 +62,16 @@ export default function LoginPage() {
         localStorage.removeItem(SAVED_EMAIL_KEY);
       }
 
-      // 응답에서 사용자 정보 추출
-      const ownerName = response.gym?.ownerName || response.user?.ownerName || response.user?.name || email.split("@")[0];
-      const token = response.accessToken || response.token;
-      const gymId = response.gym?.id;
+      // 응답에서 사용자 정보 추출 (TransformInterceptor로 래핑되어 data 안에 있음)
+      const responseData = (response as any).data || response;
+      const ownerName = responseData.gym?.ownerName || responseData.user?.ownerName || responseData.user?.name || email.split("@")[0];
+      const token = responseData.accessToken || responseData.token;
+      const gymId = responseData.gym?.id;
 
       console.log("로그인 응답 상세:", {
-        gym: response.gym,
+        response,
+        responseData,
+        gym: responseData.gym,
         gymId: gymId,
         ownerName,
         email,

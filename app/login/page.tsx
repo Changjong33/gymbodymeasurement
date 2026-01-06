@@ -67,6 +67,21 @@ export default function LoginPage() {
       const token = response.accessToken || response.token;
       const gymId = response.gym?.id;
 
+      console.log("로그인 응답 상세:", {
+        gym: response.gym,
+        gymId: gymId,
+        ownerName,
+        email,
+      });
+
+      // gymId가 없으면 에러
+      if (!gymId) {
+        console.error("gymId가 응답에 없습니다:", response);
+        setError("로그인 정보를 가져올 수 없습니다. 다시 시도해주세요.");
+        setIsSubmitting(false);
+        return;
+      }
+
       // 인증 상태 업데이트
       login(ownerName, email, token, gymId);
 

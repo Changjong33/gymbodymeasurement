@@ -40,8 +40,16 @@ export default function ListPage() {
     try {
       // 로그인한 계정의 gymId 가져오기
       const { gymId: authGymId } = getEffectiveAuth();
-      const gymId = authGymId || 1; // gymId가 없으면 기본값 1 사용
-      const response = await getMembersApi(gymId);
+
+      // gymId가 없으면 회원 조회 불가
+      if (!authGymId) {
+        console.error("gymId가 없습니다. 로그인 상태를 확인해주세요.");
+        setMembers([]);
+        setIsLoading(false);
+        return;
+      }
+
+      const response = await getMembersApi(authGymId);
 
       console.log("회원 목록 조회 응답:", response);
 

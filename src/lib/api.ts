@@ -79,7 +79,29 @@ export interface MemberResponse {
 }
 
 export const createMemberApi = async (data: MemberRequest): Promise<MemberResponse> => {
-  const response = await axios.post<MemberResponse>(`${API_BASE_URL}/members`, data);
+  // notes가 undefined이면 제외하고 전송
+  const requestBody: any = {
+    gymId: data.gymId,
+    name: data.name,
+    gender: data.gender,
+    age: data.age,
+    height: data.height,
+    weight: data.weight,
+  };
+
+  // notes가 있으면 추가
+  if (data.notes) {
+    requestBody.notes = data.notes;
+  }
+
+  console.log("API 호출 - URL:", `${API_BASE_URL}/members`);
+  console.log("API 호출 - Body:", JSON.stringify(requestBody, null, 2));
+
+  const response = await axios.post<MemberResponse>(`${API_BASE_URL}/members`, requestBody, {
+    headers: {
+      "Content-Type": "application/json",
+    },
+  });
   return response.data;
 };
 

@@ -4,7 +4,7 @@ import { useState, FormEvent, useEffect } from "react";
 import { useMemberStore } from "@/store/memberStore";
 import { useAuthStore } from "@/store/authStore";
 import { useRouter } from "next/navigation";
-import { createMemberApi } from "@/lib/api";
+import { createMemberApi, MemberRequest } from "@/lib/api";
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -50,41 +50,44 @@ export default function RegisterPage() {
     const formData = new FormData(e.currentTarget);
     const name = formData.get("name") as string;
     const gender = formData.get("gender") as "male" | "female";
-    const age = parseInt(formData.get("age") as string);
-    const height = parseFloat(formData.get("height") as string);
-    const weight = parseFloat(formData.get("weight") as string);
+    const ageStr = formData.get("age") as string;
+    const heightStr = formData.get("height") as string;
+    const weightStr = formData.get("weight") as string;
 
     // 유효성 검사
-    if (!name || !gender || !age || !height || !weight) {
+    if (!name || !gender || !ageStr || !heightStr || !weightStr) {
       setError("모든 필수 필드를 입력해주세요.");
       setIsSubmitting(false);
       return;
     }
 
-    if (age <= 0 || height <= 0 || weight <= 0) {
-      setError("나이, 키, 몸무게는 0보다 큰 값을 입력해주세요.");
+    // 숫자 변환 및 유효성 검사
+    const age = parseInt(ageStr, 10);
+    const height = parseFloat(heightStr);
+    const weight = parseFloat(weightStr);
+
+    // NaN 체크
+    if (isNaN(age) || isNaN(height) || isNaN(weight)) {
+      setError("나이, 키, 몸무게는 올바른 숫자여야 합니다.");
+      setIsSubmitting(false);
+      return;
+    }
+
+    if (age <= 0 || age > 150) {
+      setError("나이는 1 이상 150 이하여야 합니다.");
+      setIsSubmitting(false);
+      return;
+    }
+
+    if (height <= 0 || weight <= 0) {
+      setError("키와 몸무게는 0보다 큰 값을 입력해주세요.");
       setIsSubmitting(false);
       return;
     }
 
     try {
-      // age 유효성 검사 (0 이상 150 이하)
-      if (age < 0 || age > 150) {
-        setError("나이는 0 이상 150 이하여야 합니다.");
-        setIsSubmitting(false);
-        return;
-      }
-
       // gymId 확인 (일단 1로 설정, 추후 로그인한 gym의 ID로 변경 가능)
       const gymId = 1;
-
-      console.log("회원 등록 시도:", {
-        name,
-        gymId,
-        age,
-        gender,
-        apiUrl: process.env.NEXT_PUBLIC_API_URL,
-      });
 
       // 부상 부위를 notes로 변환 (선택사항)
       const notes = injuries.length > 0 ? injuries.join(", ") : undefined;
@@ -93,17 +96,33 @@ export default function RegisterPage() {
       const genderCode: "M" | "F" = gender === "male" ? "M" : "F";
 
       // 백엔드 API 호출하여 DB에 저장 (age는 숫자로 전송)
-      const requestData = {
+      const requestData: MemberRequest = {
         gymId: gymId,
-        name: name,
+        name: name.trim(),
         gender: genderCode,
         age: age, // 숫자로 전송
-        height: height,
-        weight: weight,
-        notes: notes,
+        height: Number(height.toFixed(1)), // 소수점 1자리로 제한
+        weight: Number(weight.toFixed(1)), // 소수점 1자리로 제한
+        notes: notes || undefined, // 빈 문자열이면 undefined
       };
 
-      console.log("전송할 데이터:", requestData);
+      console.log("회원 등록 시도:", {
+        name,
+        gymId,
+        age,
+        gender: genderCode,
+        height,
+        weight,
+        notes,
+        apiUrl: process.env.NEXT_PUBLIC_API_URL,
+      });
+      console.log("전송할 데이터 (타입 확인):", {
+        ...requestData,
+        gymId_type: typeof requestData.gymId,
+        age_type: typeof requestData.age,
+        height_type: typeof requestData.height,
+        weight_type: typeof requestData.weight,
+      });
 
       const response = await createMemberApi(requestData);
       console.log("회원 등록 응답:", response);

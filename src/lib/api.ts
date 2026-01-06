@@ -18,7 +18,7 @@ export interface LoginResponse {
   user?: {
     id: string;
     email: string;
-    userName?: string;
+    ownerName?: string;
     name?: string;
   };
   message?: string;
@@ -33,7 +33,7 @@ export const loginApi = async (data: LoginRequest): Promise<LoginResponse> => {
 export interface SignupRequest {
   email: string;
   password: string;
-  userName: string;
+  ownerName: string;
   gymName: string;
 }
 
@@ -42,7 +42,7 @@ export interface SignupResponse {
   user?: {
     id: string;
     email: string;
-    userName?: string;
+    ownerName?: string;
   };
 }
 

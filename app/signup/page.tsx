@@ -10,7 +10,7 @@ export default function SignupPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-  const [userName, setUserName] = useState("");
+  const [ownerName, setOwnerName] = useState("");
   const [gymName, setGymName] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState("");
@@ -21,7 +21,7 @@ export default function SignupPage() {
     setIsSubmitting(true);
 
     // 유효성 검사
-    if (!email || !password || !confirmPassword || !userName || !gymName) {
+    if (!email || !password || !confirmPassword || !ownerName || !gymName) {
       setError("모든 필드를 입력해주세요.");
       setIsSubmitting(false);
       return;
@@ -50,7 +50,7 @@ export default function SignupPage() {
     }
 
     // 사용자 이름 길이 검사
-    if (userName.length < 2) {
+    if (ownerName.length < 2) {
       setError("사용자 이름은 최소 2자 이상이어야 합니다.");
       setIsSubmitting(false);
       return;
@@ -68,7 +68,7 @@ export default function SignupPage() {
       await signupApi({
         email,
         password,
-        userName,
+        ownerName,
         gymName,
       });
 
@@ -156,14 +156,14 @@ export default function SignupPage() {
             </div>
 
             <div>
-              <label className="block text-gray-700 font-medium mb-1" htmlFor="userName">
+              <label className="block text-gray-700 font-medium mb-1" htmlFor="ownerName">
                 사용자 이름 <span className="text-red-500">*</span>
               </label>
               <input
-                id="userName"
+                id="ownerName"
                 type="text"
-                value={userName}
-                onChange={(e) => setUserName(e.target.value)}
+                value={ownerName}
+                onChange={(e) => setOwnerName(e.target.value)}
                 required
                 className="w-full border border-gray-300 rounded-md px-4 py-2.5 outline-none focus:ring-2 focus:ring-blue-200 focus:border-blue-500"
                 placeholder="사용자 이름을 입력하세요"

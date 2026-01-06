@@ -60,11 +60,11 @@ export default function LoginPage() {
       }
 
       // 응답에서 사용자 정보 추출
-      const userName = response.user?.userName || response.user?.name || email.split("@")[0];
+      const ownerName = response.user?.ownerName || response.user?.name || email.split("@")[0];
       const token = response.token;
 
       // 인증 상태 업데이트
-      login(userName, email, token);
+      login(ownerName, email, token);
 
       setIsSubmitting(false);
       router.push("/");

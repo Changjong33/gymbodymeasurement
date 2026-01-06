@@ -1,16 +1,139 @@
 "use client";
 
-import { useState, FormEvent } from "react";
+import { useState, FormEvent, useEffect } from "react";
 import { useMemberStore } from "@/store/memberStore";
 import { useMeasurementStore } from "@/store/measurementStore";
+import { useAuthStore } from "@/store/authStore";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 
+// 헬퍼 함수: FormData에서 숫자 값 가져오기
+const getNumber = (formData: FormData, key: string, isInt = false): number | undefined => {
+  const value = formData.get(key);
+  if (!value) return undefined;
+  return isInt ? parseInt(value as string) : parseFloat(value as string);
+};
+
+// 헬퍼 함수: FormData에서 체크박스 값 가져오기
+const getCheckbox = (formData: FormData, key: string): boolean => {
+  return formData.get(key) === "on";
+};
+
+// 운동 섹션 타입 정의
+interface ExerciseSection {
+  title: string;
+  prefix: string;
+  kgField: string;
+  repsField: string;
+  options: { name: string; label: string }[];
+}
+
+// 운동 섹션 데이터
+const exerciseSections: ExerciseSection[] = [
+  {
+    title: "[하체] 바벨 스쿼트",
+    prefix: "squat",
+    kgField: "squatKg",
+    repsField: "squatReps",
+    options: [
+      { name: "squatDepth", label: "스쿼트 깊이 제한적 (병렬 이하 어려움)" },
+      { name: "squatKneePain", label: "무릎 통증 발생" },
+      { name: "squatLowerBack", label: "허리 부담 느낌" },
+      { name: "squatBalance", label: "좌우 밸런스 불안정" },
+    ],
+  },
+  {
+    title: "[가슴] 벤치프레스",
+    prefix: "bench",
+    kgField: "benchKg",
+    repsField: "benchReps",
+    options: [
+      { name: "benchShoulderDiscomfort", label: "어깨 불편감" },
+      { name: "benchRangeLimit", label: "가동 범위 제한" },
+      { name: "benchImbalance", label: "좌우 힘 차이 느낌" },
+      { name: "benchScapula", label: "견갑 고정 어려움" },
+    ],
+  },
+  {
+    title: "[등] 랫풀다운",
+    prefix: "lat",
+    kgField: "latKg",
+    repsField: "latReps",
+    options: [
+      { name: "latArms", label: "팔 위주로 당겨짐" },
+      { name: "latLatsFeel", label: "광배 자극 인지 어려움" },
+      { name: "latBounce", label: "반동 사용" },
+      { name: "latScapula", label: "견갑 조절 어려움" },
+    ],
+  },
+  {
+    title: "[어깨] 숄더프레스",
+    prefix: "shoulder",
+    kgField: "shoulderKg",
+    repsField: "shoulderReps",
+    options: [
+      { name: "shoulderOverextend", label: "허리 과신전 발생" },
+      { name: "shoulderPain", label: "어깨 통증" },
+      { name: "shoulderRange", label: "가동 범위 제한" },
+      { name: "shoulderCore", label: "코어 불안정" },
+    ],
+  },
+];
+
+// 운동 섹션 컴포넌트
+function ExerciseSection({ section }: { section: ExerciseSection }) {
+  return (
+    <div className="mb-6">
+      <h3 className="text-xl font-bold text-gray-800 mb-2">{section.title}</h3>
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <label className="block font-medium mb-1 text-gray-700" htmlFor={section.kgField}>
+            무게 (kg)
+          </label>
+          <input id={section.kgField} name={section.kgField} type="number" min="0" className="w-full border border-gray-300 rounded-md px-3 py-2" placeholder="무게" />
+        </div>
+        <div>
+          <label className="block font-medium mb-1 text-gray-700" htmlFor={section.repsField}>
+            횟수 (reps)
+          </label>
+          <input id={section.repsField} name={section.repsField} type="number" min="0" className="w-full border border-gray-300 rounded-md px-3 py-2" placeholder="횟수" />
+        </div>
+      </div>
+      <div className="mt-4">
+        <div className="text-red-500 font-medium mb-2">선택사항</div>
+        <div className="flex flex-col gap-1">
+          {section.options.map((option) => (
+            <label key={option.name} className="inline-flex items-center">
+              <input type="checkbox" name={option.name} className="form-checkbox text-green-600" />
+              <span className="ml-2">{option.label}</span>
+            </label>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function MeasurementPage() {
+  const router = useRouter();
+  const { isLoggedIn } = useAuthStore();
   const { members } = useMemberStore();
   const addMeasurement = useMeasurementStore((state) => state.addMeasurement);
   const [selectedMemberId, setSelectedMemberId] = useState<string>("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
+
+  // 로그인 체크
+  useEffect(() => {
+    if (!isLoggedIn) {
+      router.push("/login");
+    }
+  }, [isLoggedIn, router]);
+
+  // 로그인하지 않은 경우 아무것도 렌더링하지 않음
+  if (!isLoggedIn) {
+    return null;
+  }
 
   const selectedMember = members.find((m) => m.id === selectedMemberId);
 
@@ -23,71 +146,51 @@ export default function MeasurementPage() {
     }
 
     setIsSubmitting(true);
-
     const formData = new FormData(e.currentTarget);
 
-    // 체성분
-    const muscle = formData.get("muscle") ? parseFloat(formData.get("muscle") as string) : undefined;
-    const bodyfat = formData.get("bodyfat") ? parseFloat(formData.get("bodyfat") as string) : undefined;
-
-    // 하체 - 바벨 스쿼트
-    const squatKg = formData.get("squatKg") ? parseFloat(formData.get("squatKg") as string) : undefined;
-    const squatReps = formData.get("squatReps") ? parseInt(formData.get("squatReps") as string) : undefined;
-
-    // 가슴 - 벤치프레스
-    const benchKg = formData.get("benchKg") ? parseFloat(formData.get("benchKg") as string) : undefined;
-    const benchReps = formData.get("benchReps") ? parseInt(formData.get("benchReps") as string) : undefined;
-
-    // 등 - 랫풀다운
-    const latKg = formData.get("latKg") ? parseFloat(formData.get("latKg") as string) : undefined;
-    const latReps = formData.get("latReps") ? parseInt(formData.get("latReps") as string) : undefined;
-
-    // 어깨 - 숄더프레스
-    const shoulderKg = formData.get("shoulderKg") ? parseFloat(formData.get("shoulderKg") as string) : undefined;
-    const shoulderReps = formData.get("shoulderReps") ? parseInt(formData.get("shoulderReps") as string) : undefined;
-
-    // 코어 - 플랭크
-    const plankSec = formData.get("plankSec") ? parseInt(formData.get("plankSec") as string) : undefined;
-
-    // 측정 데이터 추가
-    addMeasurement({
+    // 측정 데이터 구성
+    const measurementData: any = {
       memberId: selectedMemberId,
       memberName: selectedMember.name,
-      muscle,
-      bodyfat,
-      beforeIntenseExercise: formData.get("beforeIntenseExercise") === "on",
-      waterIntakeDifferent: formData.get("waterIntakeDifferent") === "on",
-      recentWeightChange: formData.get("recentWeightChange") === "on",
-      squatKg,
-      squatReps,
-      squatDepth: formData.get("squatDepth") === "on",
-      squatKneePain: formData.get("squatKneePain") === "on",
-      squatLowerBack: formData.get("squatLowerBack") === "on",
-      squatBalance: formData.get("squatBalance") === "on",
-      benchKg,
-      benchReps,
-      benchShoulderDiscomfort: formData.get("benchShoulderDiscomfort") === "on",
-      benchRangeLimit: formData.get("benchRangeLimit") === "on",
-      benchImbalance: formData.get("benchImbalance") === "on",
-      benchScapula: formData.get("benchScapula") === "on",
-      latKg,
-      latReps,
-      latArms: formData.get("latArms") === "on",
-      latLatsFeel: formData.get("latLatsFeel") === "on",
-      latBounce: formData.get("latBounce") === "on",
-      latScapula: formData.get("latScapula") === "on",
-      shoulderKg,
-      shoulderReps,
-      shoulderOverextend: formData.get("shoulderOverextend") === "on",
-      shoulderPain: formData.get("shoulderPain") === "on",
-      shoulderRange: formData.get("shoulderRange") === "on",
-      shoulderCore: formData.get("shoulderCore") === "on",
-      plankSec,
-      plankSag: formData.get("plankSag") === "on",
-      plankShake: formData.get("plankShake") === "on",
-      plankBreath: formData.get("plankBreath") === "on",
-      plankCollapse: formData.get("plankCollapse") === "on",
-    });
+      // 체성분
+      muscle: getNumber(formData, "muscle"),
+      bodyfat: getNumber(formData, "bodyfat"),
+      beforeIntenseExercise: getCheckbox(formData, "beforeIntenseExercise"),
+      waterIntakeDifferent: getCheckbox(formData, "waterIntakeDifferent"),
+      recentWeightChange: getCheckbox(formData, "recentWeightChange"),
+      // 운동별 데이터
+      squatKg: getNumber(formData, "squatKg"),
+      squatReps: getNumber(formData, "squatReps", true),
+      squatDepth: getCheckbox(formData, "squatDepth"),
+      squatKneePain: getCheckbox(formData, "squatKneePain"),
+      squatLowerBack: getCheckbox(formData, "squatLowerBack"),
+      squatBalance: getCheckbox(formData, "squatBalance"),
+      benchKg: getNumber(formData, "benchKg"),
+      benchReps: getNumber(formData, "benchReps", true),
+      benchShoulderDiscomfort: getCheckbox(formData, "benchShoulderDiscomfort"),
+      benchRangeLimit: getCheckbox(formData, "benchRangeLimit"),
+      benchImbalance: getCheckbox(formData, "benchImbalance"),
+      benchScapula: getCheckbox(formData, "benchScapula"),
+      latKg: getNumber(formData, "latKg"),
+      latReps: getNumber(formData, "latReps", true),
+      latArms: getCheckbox(formData, "latArms"),
+      latLatsFeel: getCheckbox(formData, "latLatsFeel"),
+      latBounce: getCheckbox(formData, "latBounce"),
+      latScapula: getCheckbox(formData, "latScapula"),
+      shoulderKg: getNumber(formData, "shoulderKg"),
+      shoulderReps: getNumber(formData, "shoulderReps", true),
+      shoulderOverextend: getCheckbox(formData, "shoulderOverextend"),
+      shoulderPain: getCheckbox(formData, "shoulderPain"),
+      shoulderRange: getCheckbox(formData, "shoulderRange"),
+      shoulderCore: getCheckbox(formData, "shoulderCore"),
+      plankSec: getNumber(formData, "plankSec", true),
+      plankSag: getCheckbox(formData, "plankSag"),
+      plankShake: getCheckbox(formData, "plankShake"),
+      plankBreath: getCheckbox(formData, "plankBreath"),
+      plankCollapse: getCheckbox(formData, "plankCollapse"),
+    };
+
+    addMeasurement(measurementData);
 
     setShowSuccess(true);
     setIsSubmitting(false);
@@ -172,7 +275,7 @@ export default function MeasurementPage() {
                   <label className="block font-medium mb-1 text-gray-700" htmlFor="muscle">
                     골격근량 (kg)
                   </label>
-                  <input id="muscle" name="muscle" type="number" min="0" className="w-full border border-gray-300 rounded-md px-3 py-2" placeholder="근육량" />
+                  <input id="muscle" name="muscle" type="number" min="0" className="w-full border border-gray-300 rounded-md px-3 py-2" placeholder="골격근량" />
                 </div>
                 <div>
                   <label className="block font-medium mb-1 text-gray-700" htmlFor="bodyfat">
@@ -182,183 +285,26 @@ export default function MeasurementPage() {
                 </div>
               </div>
               <div className="mt-4">
-                <div className="text-gray-600 font-medium mb-2">선택사항</div>
+                <div className="text-red-500 font-medium mb-2">선택사항</div>
                 <div className="flex flex-col gap-1">
-                  <label className="inline-flex items-center">
-                    <input type="checkbox" name="beforeIntenseExercise" className="form-checkbox text-green-600" />
-                    <span className="ml-2">측정 전날 강도 높은 운동</span>
-                  </label>
-                  <label className="inline-flex items-center">
-                    <input type="checkbox" name="waterIntakeDifferent" className="form-checkbox text-green-600" />
-                    <span className="ml-2">수분 섭취 평소와 다름</span>
-                  </label>
-                  <label className="inline-flex items-center">
-                    <input type="checkbox" name="recentWeightChange" className="form-checkbox text-green-600" />
-                    <span className="ml-2">최근 체중 변동 있음</span>
-                  </label>
+                  {[
+                    { name: "beforeIntenseExercise", label: "측정 전날 강도 높은 운동" },
+                    { name: "waterIntakeDifferent", label: "수분 섭취 평소와 다름" },
+                    { name: "recentWeightChange", label: "최근 체중 변동 있음" },
+                  ].map((option) => (
+                    <label key={option.name} className="inline-flex items-center">
+                      <input type="checkbox" name={option.name} className="form-checkbox text-green-600" />
+                      <span className="ml-2">{option.label}</span>
+                    </label>
+                  ))}
                 </div>
               </div>
             </div>
 
-            {/* 하체 - 바벨 스쿼트 */}
-            <div className="mb-6">
-              <h3 className="text-xl font-bold text-gray-800 mb-2">[하체] 바벨 스쿼트</h3>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block font-medium mb-1 text-gray-700" htmlFor="squatKg">
-                    무게 (kg)
-                  </label>
-                  <input id="squatKg" name="squatKg" type="number" min="0" className="w-full border border-gray-300 rounded-md px-3 py-2" placeholder="무게" />
-                </div>
-                <div>
-                  <label className="block font-medium mb-1 text-gray-700" htmlFor="squatReps">
-                    횟수 (reps)
-                  </label>
-                  <input id="squatReps" name="squatReps" type="number" min="0" className="w-full border border-gray-300 rounded-md px-3 py-2" placeholder="횟수" />
-                </div>
-              </div>
-              <div className="mt-4">
-                <div className="text-gray-600 font-medium mb-2">선택사항</div>
-                <div className="flex flex-col gap-1">
-                  <label className="inline-flex items-center">
-                    <input type="checkbox" name="squatDepth" className="form-checkbox text-green-600" />
-                    <span className="ml-2">스쿼트 깊이 제한적 (병렬 이하 어려움)</span>
-                  </label>
-                  <label className="inline-flex items-center">
-                    <input type="checkbox" name="squatKneePain" className="form-checkbox text-green-600" />
-                    <span className="ml-2">무릎 통증 발생</span>
-                  </label>
-                  <label className="inline-flex items-center">
-                    <input type="checkbox" name="squatLowerBack" className="form-checkbox text-green-600" />
-                    <span className="ml-2">허리 부담 느낌</span>
-                  </label>
-                  <label className="inline-flex items-center">
-                    <input type="checkbox" name="squatBalance" className="form-checkbox text-green-600" />
-                    <span className="ml-2">좌우 밸런스 불안정</span>
-                  </label>
-                </div>
-              </div>
-            </div>
-
-            {/* 가슴 - 벤치프레스 */}
-            <div className="mb-6">
-              <h3 className="text-xl font-bold text-gray-800 mb-2">[가슴] 벤치프레스</h3>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block font-medium mb-1 text-gray-700" htmlFor="benchKg">
-                    무게 (kg)
-                  </label>
-                  <input id="benchKg" name="benchKg" type="number" min="0" className="w-full border border-gray-300 rounded-md px-3 py-2" placeholder="무게" />
-                </div>
-                <div>
-                  <label className="block font-medium mb-1 text-gray-700" htmlFor="benchReps">
-                    횟수 (reps)
-                  </label>
-                  <input id="benchReps" name="benchReps" type="number" min="0" className="w-full border border-gray-300 rounded-md px-3 py-2" placeholder="횟수" />
-                </div>
-              </div>
-              <div className="mt-4">
-                <div className="text-gray-600 font-medium mb-2">선택사항</div>
-                <div className="flex flex-col gap-1">
-                  <label className="inline-flex items-center">
-                    <input type="checkbox" name="benchShoulderDiscomfort" className="form-checkbox text-green-600" />
-                    <span className="ml-2">어깨 불편감</span>
-                  </label>
-                  <label className="inline-flex items-center">
-                    <input type="checkbox" name="benchRangeLimit" className="form-checkbox text-green-600" />
-                    <span className="ml-2">가동 범위 제한</span>
-                  </label>
-                  <label className="inline-flex items-center">
-                    <input type="checkbox" name="benchImbalance" className="form-checkbox text-green-600" />
-                    <span className="ml-2">좌우 힘 차이 느낌</span>
-                  </label>
-                  <label className="inline-flex items-center">
-                    <input type="checkbox" name="benchScapula" className="form-checkbox text-green-600" />
-                    <span className="ml-2">견갑 고정 어려움</span>
-                  </label>
-                </div>
-              </div>
-            </div>
-
-            {/* 등 - 랫풀다운 */}
-            <div className="mb-6">
-              <h3 className="text-xl font-bold text-gray-800 mb-2">[등] 랫풀다운</h3>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block font-medium mb-1 text-gray-700" htmlFor="latKg">
-                    무게 (kg)
-                  </label>
-                  <input id="latKg" name="latKg" type="number" min="0" className="w-full border border-gray-300 rounded-md px-3 py-2" placeholder="무게" />
-                </div>
-                <div>
-                  <label className="block font-medium mb-1 text-gray-700" htmlFor="latReps">
-                    횟수 (reps)
-                  </label>
-                  <input id="latReps" name="latReps" type="number" min="0" className="w-full border border-gray-300 rounded-md px-3 py-2" placeholder="횟수" />
-                </div>
-              </div>
-              <div className="mt-4">
-                <div className="text-gray-600 font-medium mb-2">선택사항</div>
-                <div className="flex flex-col gap-1">
-                  <label className="inline-flex items-center">
-                    <input type="checkbox" name="latArms" className="form-checkbox text-green-600" />
-                    <span className="ml-2">팔 위주로 당겨짐</span>
-                  </label>
-                  <label className="inline-flex items-center">
-                    <input type="checkbox" name="latLatsFeel" className="form-checkbox text-green-600" />
-                    <span className="ml-2">광배 자극 인지 어려움</span>
-                  </label>
-                  <label className="inline-flex items-center">
-                    <input type="checkbox" name="latBounce" className="form-checkbox text-green-600" />
-                    <span className="ml-2">반동 사용</span>
-                  </label>
-                  <label className="inline-flex items-center">
-                    <input type="checkbox" name="latScapula" className="form-checkbox text-green-600" />
-                    <span className="ml-2">견갑 조절 어려움</span>
-                  </label>
-                </div>
-              </div>
-            </div>
-
-            {/* 어깨 - 숄더프레스 */}
-            <div className="mb-6">
-              <h3 className="text-xl font-bold text-gray-800 mb-2">[어깨] 숄더프레스</h3>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block font-medium mb-1 text-gray-700" htmlFor="shoulderKg">
-                    무게 (kg)
-                  </label>
-                  <input id="shoulderKg" name="shoulderKg" type="number" min="0" className="w-full border border-gray-300 rounded-md px-3 py-2" placeholder="무게" />
-                </div>
-                <div>
-                  <label className="block font-medium mb-1 text-gray-700" htmlFor="shoulderReps">
-                    횟수 (reps)
-                  </label>
-                  <input id="shoulderReps" name="shoulderReps" type="number" min="0" className="w-full border border-gray-300 rounded-md px-3 py-2" placeholder="횟수" />
-                </div>
-              </div>
-              <div className="mt-4">
-                <div className="text-gray-600 font-medium mb-2">선택사항</div>
-                <div className="flex flex-col gap-1">
-                  <label className="inline-flex items-center">
-                    <input type="checkbox" name="shoulderOverextend" className="form-checkbox text-green-600" />
-                    <span className="ml-2">허리 과신전 발생</span>
-                  </label>
-                  <label className="inline-flex items-center">
-                    <input type="checkbox" name="shoulderPain" className="form-checkbox text-green-600" />
-                    <span className="ml-2">어깨 통증</span>
-                  </label>
-                  <label className="inline-flex items-center">
-                    <input type="checkbox" name="shoulderRange" className="form-checkbox text-green-600" />
-                    <span className="ml-2">가동 범위 제한</span>
-                  </label>
-                  <label className="inline-flex items-center">
-                    <input type="checkbox" name="shoulderCore" className="form-checkbox text-green-600" />
-                    <span className="ml-2">코어 불안정</span>
-                  </label>
-                </div>
-              </div>
-            </div>
+            {/* 운동 섹션들 */}
+            {exerciseSections.map((section) => (
+              <ExerciseSection key={section.prefix} section={section} />
+            ))}
 
             {/* 코어 - 플랭크 */}
             <div className="mb-6">
@@ -372,24 +318,19 @@ export default function MeasurementPage() {
                 </div>
               </div>
               <div className="mt-4">
-                <div className="text-gray-600 font-medium mb-2">선택사항</div>
+                <div className="text-red-500 font-medium mb-2">선택사항</div>
                 <div className="flex flex-col gap-1">
-                  <label className="inline-flex items-center">
-                    <input type="checkbox" name="plankSag" className="form-checkbox text-green-600" />
-                    <span className="ml-2">허리 처짐 발생</span>
-                  </label>
-                  <label className="inline-flex items-center">
-                    <input type="checkbox" name="plankShake" className="form-checkbox text-green-600" />
-                    <span className="ml-2">어깨 떨림</span>
-                  </label>
-                  <label className="inline-flex items-center">
-                    <input type="checkbox" name="plankBreath" className="form-checkbox text-green-600" />
-                    <span className="ml-2">호흡 유지 어려움</span>
-                  </label>
-                  <label className="inline-flex items-center">
-                    <input type="checkbox" name="plankCollapse" className="form-checkbox text-green-600" />
-                    <span className="ml-2">30초 이후 자세 붕괴</span>
-                  </label>
+                  {[
+                    { name: "plankSag", label: "허리 처짐 발생" },
+                    { name: "plankShake", label: "어깨 떨림" },
+                    { name: "plankBreath", label: "호흡 유지 어려움" },
+                    { name: "plankCollapse", label: "30초 이후 자세 붕괴" },
+                  ].map((option) => (
+                    <label key={option.name} className="inline-flex items-center">
+                      <input type="checkbox" name={option.name} className="form-checkbox text-green-600" />
+                      <span className="ml-2">{option.label}</span>
+                    </label>
+                  ))}
                 </div>
               </div>
             </div>
@@ -397,7 +338,7 @@ export default function MeasurementPage() {
             <button
               type="submit"
               disabled={!selectedMemberId || isSubmitting || members.length === 0}
-              className="w-full bg-green-500 text-white text-lg font-semibold rounded-md py-2 hover:bg-green-600 transition disabled:bg-gray-400 disabled:cursor-not-allowed"
+              className="w-full bg-gradient-to-r from-gray-400 to-gray-600 text-white text-lg font-semibold rounded-md py-2 hover:from-gray-600 hover:to-gray-800 transition disabled:bg-gray-100 disabled:cursor-not-allowed"
             >
               {isSubmitting ? "저장 중..." : "측정 완료"}
             </button>

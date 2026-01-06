@@ -1,0 +1,154 @@
+"use client";
+
+import { useState, FormEvent, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { useAuthStore } from "@/store/authStore";
+import Link from "next/link";
+
+const SAVED_EMAIL_KEY = "saved-email";
+
+export default function LoginPage() {
+  const router = useRouter();
+  const login = useAuthStore((state) => state.login);
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [saveEmail, setSaveEmail] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState("");
+
+  // 페이지 로드 시 저장된 이메일 불러오기
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const savedEmail = localStorage.getItem(SAVED_EMAIL_KEY);
+      if (savedEmail) {
+        setEmail(savedEmail);
+        setSaveEmail(true);
+      }
+    }
+  }, []);
+
+  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setError("");
+    setIsSubmitting(true);
+
+    // 유효성 검사
+    if (!email || !password) {
+      setError("이메일과 비밀번호를 모두 입력해주세요.");
+      setIsSubmitting(false);
+      return;
+    }
+
+    // 이메일 형식 검사
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      setError("올바른 이메일 형식을 입력해주세요.");
+      setIsSubmitting(false);
+      return;
+    }
+
+    // 임시 로그인 처리 (실제로는 API 호출)
+    // 테스트용: 이메일에서 이름 추출 또는 이메일 앞부분을 이름으로 사용
+    const userName = email.split("@")[0];
+
+    // 실제로는 여기서 API 호출하여 인증
+    // const response = await api.post('/auth/login', { email, password });
+
+    // 이메일 저장 처리
+    if (saveEmail) {
+      localStorage.setItem(SAVED_EMAIL_KEY, email);
+    } else {
+      localStorage.removeItem(SAVED_EMAIL_KEY);
+    }
+
+    // 임시로 항상 성공 처리
+    setTimeout(() => {
+      login(userName);
+      setIsSubmitting(false);
+      router.push("/");
+    }, 500);
+  };
+
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-50 to-gray-100 px-4">
+      <div className="max-w-md w-full">
+        <div className="bg-white rounded-xl shadow-lg border border-gray-200 p-8">
+          <div className="text-center mb-8">
+            <div className="w-20 h-20 bg-gradient-to-r from-gray-400 to-gray-600 rounded-full flex items-center justify-center mx-auto mb-4">
+              <span className="text-4xl">💪</span>
+            </div>
+            <h1 className="text-3xl font-bold text-gray-800 mb-2">로그인</h1>
+            <p className="text-gray-600">헬스장 회원관리 시스템에 로그인하세요</p>
+          </div>
+
+          {error && <div className="mb-4 bg-red-50 border border-red-200 text-red-800 px-4 py-3 rounded-lg text-sm">{error}</div>}
+
+          <form onSubmit={handleSubmit} className="space-y-5">
+            <div>
+              <label className="block text-gray-700 font-medium mb-1" htmlFor="email">
+                이메일 <span className="text-red-500">*</span>
+              </label>
+              <input
+                id="email"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+                className="w-full border border-gray-300 rounded-md px-4 py-2.5 outline-none focus:ring-2 focus:ring-blue-200 focus:border-blue-500"
+                placeholder="이메일을 입력하세요"
+                disabled={isSubmitting}
+              />
+            </div>
+
+            <div>
+              <label className="block text-gray-700 font-medium mb-1" htmlFor="password">
+                비밀번호 <span className="text-red-500">*</span>
+              </label>
+              <input
+                id="password"
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                className="w-full border border-gray-300 rounded-md px-4 py-2.5 outline-none focus:ring-2 focus:ring-blue-200 focus:border-blue-500"
+                placeholder="비밀번호를 입력하세요"
+                disabled={isSubmitting}
+              />
+            </div>
+
+            <div>
+              <div className="mb-2 flex justify-between items-center">
+                <label className="inline-flex items-center cursor-pointer">
+                  <input type="checkbox" checked={saveEmail} onChange={(e) => setSaveEmail(e.target.checked)} className="form-checkbox text-blue-600" />
+                  <span className="ml-2">이메일 저장</span>
+                </label>
+                <div className="text-end">
+                  <span className="text-blue-600 text-sm underline cursor-pointer ">이메일ㆍ비밀번호 찾기</span>
+                </div>
+              </div>
+
+              <button
+                type="submit"
+                disabled={isSubmitting}
+                className="w-full bg-gradient-to-r from-gray-400 to-gray-600 text-white text-lg font-semibold rounded-md py-3 hover:from-gray-600 hover:to-gray-800 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed"
+              >
+                {isSubmitting ? "로그인 중..." : "로그인"}
+              </button>
+              <div className="w-full border-t border-gray-200 my-4"></div>
+              <Link
+                href="/signup"
+                className="block w-full bg-gradient-to-r from-orange-400 to-orange-600 text-white text-lg font-semibold rounded-md py-3 hover:from-orange-600 hover:to-orange-800 transition-colors text-center"
+              >
+                회원가입
+              </Link>
+            </div>
+          </form>
+
+          <div className="mt-6 text-center">
+            <p className="text-sm text-gray-600">테스트용: 이메일과 비밀번호를 입력하면 로그인됩니다.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}

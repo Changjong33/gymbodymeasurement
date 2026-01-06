@@ -2,7 +2,7 @@ import Link from "next/link";
 
 export default function Home() {
   const quickActions = [
-    { path: "/register", title: "회원정보등록", description: "새로운 회원 정보를 등록합니다", icon: "📝", color: "from-blue-500 to-blue-600" },
+    { path: "/register", title: "회원정보등록", description: "새로운 회원 정보를 등록합니다", icon: "📝", color: "from-red-500 to-red-600" },
     { path: "/measurement", title: "회원점수측정", description: "회원의 체력 점수를 측정합니다", icon: "📊", color: "from-green-500 to-green-600" },
     { path: "/list", title: "회원정보목록", description: "등록된 회원 정보를 조회합니다", icon: "📋", color: "from-purple-500 to-purple-600" },
   ];
@@ -16,11 +16,11 @@ export default function Home() {
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
         {quickActions.map((action) => (
-          <Link key={action.path} href={action.path} className="group bg-white rounded-xl shadow-md hover:shadow-xl transition-all duration-300 p-6 border border-gray-200 hover:border-blue-300">
+          <Link key={action.path} href={action.path} className="group bg-white rounded-xl shadow-md hover:shadow-xl transition-all duration-300 p-6 border border-gray-200 hover:border-red-300">
             <div className={`w-16 h-16 rounded-lg bg-gradient-to-r ${action.color} flex items-center justify-center mb-4 text-3xl group-hover:scale-110 transition-transform duration-300`}>
               {action.icon}
             </div>
-            <h3 className="text-xl font-bold text-gray-800 mb-2 group-hover:text-blue-600 transition-colors">{action.title}</h3>
+            <h3 className="text-xl font-bold text-gray-800 mb-2 group-hover:text-red-600 transition-colors">{action.title}</h3>
             <p className="text-gray-600 text-sm">{action.description}</p>
           </Link>
         ))}

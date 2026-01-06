@@ -1,16 +1,14 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useAuthStore } from "@/store/authStore";
 
 export default function Header() {
-  const { isLoggedIn, userName, login, logout } = useAuthStore();
+  const router = useRouter();
+  const { isLoggedIn, userName, logout } = useAuthStore();
 
-  const handleLogin = () => {
-    // 임시 로그인 처리 (실제로는 API 호출)
-    const name = prompt("이름을 입력하세요:");
-    if (name) {
-      login(name);
-    }
+  const handleLoginClick = () => {
+    router.push("/login");
   };
 
   return (
@@ -30,12 +28,12 @@ export default function Header() {
               </div>
               <span className="text-white font-medium">{userName}님</span>
             </div>
-            <button onClick={logout} className="px-5 py-2 bg-white text-blue-600 rounded-lg hover:bg-gray-100 transition-all duration-200 font-semibold shadow-md hover:shadow-lg">
+            <button onClick={logout} className="px-5 py-2 bg-white text-red-600 rounded-lg hover:bg-gray-100 transition-all duration-200 font-semibold shadow-md hover:shadow-lg">
               로그아웃
             </button>
           </div>
         ) : (
-          <button onClick={handleLogin} className="px-6 py-2.5 bg-white rounded-lg hover:bg-gray-100 transition-all duration-200 font-semibold shadow-md hover:shadow-lg">
+          <button onClick={handleLoginClick} className="px-6 py-2.5 bg-white text-gray-600 rounded-lg hover:bg-gray-100 transition-all duration-200 font-semibold shadow-md hover:shadow-lg">
             로그인
           </button>
         )}

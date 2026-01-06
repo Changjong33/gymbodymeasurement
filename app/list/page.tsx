@@ -1,12 +1,28 @@
 "use client";
 
-import { useState, FormEvent } from "react";
+import { useState, FormEvent, useEffect } from "react";
 import { useMemberStore, Member } from "@/store/memberStore";
+import { useAuthStore } from "@/store/authStore";
+import { useRouter } from "next/navigation";
 
 export default function ListPage() {
+  const router = useRouter();
+  const { isLoggedIn } = useAuthStore();
   const { members, removeMember, updateMember } = useMemberStore();
   const [editingMember, setEditingMember] = useState<Member | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // 로그인 체크
+  useEffect(() => {
+    if (!isLoggedIn) {
+      router.push("/login");
+    }
+  }, [isLoggedIn, router]);
+
+  // 로그인하지 않은 경우 아무것도 렌더링하지 않음
+  if (!isLoggedIn) {
+    return null;
+  }
 
   const handleDelete = (id: string, name: string) => {
     if (confirm(`${name} 회원의 정보를 삭제하시겠습니까?`)) {

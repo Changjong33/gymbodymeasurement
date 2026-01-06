@@ -1,14 +1,28 @@
 "use client";
 
-import { useState, FormEvent } from "react";
+import { useState, FormEvent, useEffect } from "react";
 import { useMemberStore } from "@/store/memberStore";
+import { useAuthStore } from "@/store/authStore";
 import { useRouter } from "next/navigation";
 
 export default function RegisterPage() {
   const router = useRouter();
+  const { isLoggedIn } = useAuthStore();
   const addMember = useMemberStore((state) => state.addMember);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
+
+  // 로그인 체크
+  useEffect(() => {
+    if (!isLoggedIn) {
+      router.push("/login");
+    }
+  }, [isLoggedIn, router]);
+
+  // 로그인하지 않은 경우 아무것도 렌더링하지 않음
+  if (!isLoggedIn) {
+    return null;
+  }
 
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -98,11 +112,11 @@ export default function RegisterPage() {
                 성별 <span className="text-red-500">*</span>
               </label>
               <div className="flex items-center gap-5">
-                <label className="inline-flex items-center">
+                <label className="inline-flex items-center cursor-pointer">
                   <input type="radio" name="gender" value="male" required className="form-radio text-blue-600" />
                   <span className="ml-2">남</span>
                 </label>
-                <label className="inline-flex items-center">
+                <label className="inline-flex items-center cursor-pointer">
                   <input type="radio" name="gender" value="female" required className="form-radio text-blue-600" />
                   <span className="ml-2">여</span>
                 </label>
@@ -155,7 +169,7 @@ export default function RegisterPage() {
             <button
               type="submit"
               disabled={isSubmitting}
-              className="w-full bg-blue-500 text-white text-lg font-semibold rounded-md py-2 hover:bg-blue-600 transition disabled:bg-gray-400 disabled:cursor-not-allowed"
+              className="w-full bg-gradient-to-r from-gray-400 to-gray-600 text-white text-lg font-semibold rounded-md py-2 hover:from-gray-600 hover:to-gray-800 transition disabled:bg-gray-400 disabled:cursor-not-allowed"
             >
               {isSubmitting ? "등록 중..." : "등록하기"}
             </button>

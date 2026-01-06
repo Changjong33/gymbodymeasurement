@@ -68,8 +68,9 @@ export default function LoginPage() {
       }
 
       // 응답에서 사용자 정보 추출 (TransformInterceptor로 래핑되어 data 안에 있음)
-      const responseData = 'data' in response && response.data ? response.data : response;
-      const ownerName = responseData.gym?.ownerName || responseData.user?.ownerName || responseData.user?.name || email.split("@")[0];
+      const responseData = "data" in response && response.data ? response.data : response;
+      const ownerName =
+        responseData.gym?.ownerName || responseData.user?.ownerName || responseData.user?.name || email.split("@")[0];
       const token = responseData.accessToken || responseData.token;
       const gymId = responseData.gym?.id;
 
@@ -92,6 +93,17 @@ export default function LoginPage() {
         setError("로그인 정보를 가져올 수 없습니다. 다시 시도해주세요.");
         setIsSubmitting(false);
         return;
+      }
+
+      // 액세스 토큰을 로컬스토리지에 저장
+      if (typeof window !== "undefined" && token) {
+        try {
+          localStorage.setItem("accessToken", token);
+        } catch (storageError) {
+          if (process.env.NEXT_PUBLIC_APP_ENV === "development" || process.env.NODE_ENV === "development") {
+            console.warn("accessToken 로컬스토리지 저장 실패:", storageError);
+          }
+        }
       }
 
       // 인증 상태 업데이트

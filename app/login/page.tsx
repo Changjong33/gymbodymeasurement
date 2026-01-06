@@ -55,7 +55,7 @@ export default function LoginPage() {
 
       // 백엔드 API 호출
       const response = await loginApi({ email, password });
-      
+
       if (process.env.NEXT_PUBLIC_APP_ENV === "development" || process.env.NODE_ENV === "development") {
         console.log("로그인 응답:", response);
       }
@@ -68,9 +68,8 @@ export default function LoginPage() {
       }
 
       // 응답에서 사용자 정보 추출 (TransformInterceptor로 래핑되어 data 안에 있음)
-      const responseData = "data" in response && response.data ? response.data : response;
-      const ownerName =
-        responseData.gym?.ownerName || responseData.user?.ownerName || responseData.user?.name || email.split("@")[0];
+      const responseData: any = "data" in response && response.data ? response.data : response;
+      const ownerName = responseData.gym?.ownerName || responseData.user?.ownerName || responseData.user?.name || email.split("@")[0];
       const token = responseData.accessToken || responseData.token;
       const gymId = responseData.gym?.id;
 

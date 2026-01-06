@@ -112,7 +112,6 @@ export const signupApi = async (data: SignupRequest): Promise<SignupResponse> =>
 
 // 회원 등록 API
 export interface MemberRequest {
-  gymId: number;
   name: string;
   gender: "M" | "F";
   age: number; // 숫자로 변경
@@ -138,8 +137,8 @@ export interface MemberResponse {
 
 export const createMemberApi = async (data: MemberRequest): Promise<MemberResponse> => {
   // 모든 값을 명시적으로 올바른 타입으로 변환
+  // gymId는 JWT 토큰에서 서버가 자동으로 추출하므로 포함하지 않음
   const requestBody: any = {
-    gymId: Number(data.gymId), // 명시적으로 숫자로 변환
     name: String(data.name).trim(),
     gender: String(data.gender), // "M" 또는 "F"
     age: Number(data.age), // 명시적으로 숫자로 변환
@@ -193,7 +192,6 @@ export const getMembersApi = async (): Promise<GetMembersResponse> => {
 
 // 회원 수정 API
 export interface UpdateMemberRequest {
-  gymId?: number;
   name?: string;
   gender?: "M" | "F";
   age?: number;
@@ -205,7 +203,7 @@ export interface UpdateMemberRequest {
 export const updateMemberApi = async (id: string | number, data: UpdateMemberRequest): Promise<MemberResponse> => {
   const requestBody: any = {};
 
-  if (data.gymId !== undefined) requestBody.gymId = Number(data.gymId);
+  // gymId는 JWT 토큰에서 서버가 자동으로 추출하므로 포함하지 않음
   if (data.name !== undefined) requestBody.name = String(data.name).trim();
   if (data.gender !== undefined) requestBody.gender = String(data.gender);
   if (data.age !== undefined) requestBody.age = Number(data.age);

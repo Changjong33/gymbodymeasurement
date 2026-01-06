@@ -86,17 +86,13 @@ export default function RegisterPage() {
     }
 
     try {
-      // 로그인한 계정의 gymId 가져오기
-      const { gymId: authGymId } = getEffectiveAuth();
-
-      // gymId가 없으면 회원 등록 불가
-      if (!authGymId) {
+      // 로그인 상태 확인
+      const { isLoggedIn: authIsLoggedIn } = getEffectiveAuth();
+      if (!authIsLoggedIn && !devMode) {
         setError("로그인 상태를 확인할 수 없습니다. 다시 로그인해주세요.");
         setIsSubmitting(false);
         return;
       }
-
-      const gymId = authGymId;
 
       // 부상 부위를 notes로 변환 (선택사항)
       const notes = injuries.length > 0 ? injuries.join(", ") : undefined;
@@ -105,8 +101,8 @@ export default function RegisterPage() {
       const genderCode: "M" | "F" = gender === "male" ? "M" : "F";
 
       // 백엔드 API 호출하여 DB에 저장 (age는 숫자로 전송)
+      // gymId는 JWT 토큰에서 서버가 자동으로 추출하므로 포함하지 않음
       const requestData: MemberRequest = {
-        gymId: gymId,
         name: name.trim(),
         gender: genderCode,
         age: age, // 숫자로 전송
@@ -119,13 +115,13 @@ export default function RegisterPage() {
         console.log("=== 회원 등록 시작 ===");
         console.log("입력 데이터:", {
           name,
-          gymId,
           age,
           gender: genderCode,
           height,
           weight,
           notes,
         });
+        console.log("gymId는 JWT 토큰에서 서버가 자동으로 추출합니다.");
       }
 
       const response = await createMemberApi(requestData);

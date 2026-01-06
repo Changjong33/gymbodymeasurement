@@ -135,8 +135,11 @@ export const createMemberApi = async (data: MemberRequest): Promise<MemberRespon
 
 // 회원 조회 API
 export interface GetMembersResponse {
+  statusCode?: number;
+  data?: MemberResponse["member"][];
   members?: MemberResponse["member"][];
   message?: string;
+  timestamp?: string;
 }
 
 export const getMembersApi = async (gymId?: number): Promise<GetMembersResponse> => {

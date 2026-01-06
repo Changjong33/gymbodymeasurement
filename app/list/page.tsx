@@ -47,9 +47,25 @@ export default function ListPage() {
         
         console.log("회원 목록 조회 응답:", response);
         
-        if (response.members && Array.isArray(response.members)) {
-          // 백엔드 응답을 프론트엔드 Member 형식으로 변환
-          const convertedMembers: Member[] = response.members.map((member: any) => {
+        // 응답 구조에 따라 배열 추출
+        let membersArray: any[] = [];
+        
+        // response.data가 배열인 경우 (NestJS 표준 응답 형식)
+        if (response.data && Array.isArray(response.data)) {
+          membersArray = response.data;
+        }
+        // response.members가 배열인 경우
+        else if (response.members && Array.isArray(response.members)) {
+          membersArray = response.members;
+        }
+        // response 자체가 배열인 경우
+        else if (Array.isArray(response)) {
+          membersArray = response;
+        }
+        
+        // 백엔드 응답을 프론트엔드 Member 형식으로 변환
+        if (Array.isArray(membersArray)) {
+          const convertedMembers: Member[] = membersArray.map((member: any) => {
             // height와 weight가 문자열일 수 있으므로 숫자로 변환
             const height = typeof member.height === 'string' 
               ? parseFloat(member.height) 
@@ -74,6 +90,7 @@ export default function ListPage() {
           setMembers(convertedMembers);
         } else {
           console.warn("회원 목록이 배열이 아닙니다:", response);
+          setMembers([]);
         }
       } catch (error) {
         console.error("회원 목록 조회 실패:", error);

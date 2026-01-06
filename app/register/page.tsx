@@ -143,8 +143,14 @@ export default function RegisterPage() {
       // 성공 메시지 표시
       setShowSuccess(true);
 
-      // 폼 초기화
-      e.currentTarget.reset();
+      // 폼 초기화 (안전하게 처리)
+      try {
+        if (e.currentTarget) {
+          e.currentTarget.reset();
+        }
+      } catch (resetError) {
+        console.warn("폼 리셋 중 오류:", resetError);
+      }
       setInjuries([]);
       setShowMoreInjuries(false);
 

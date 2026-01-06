@@ -38,8 +38,9 @@ export default function ListPage() {
 
     setIsLoading(true);
     try {
-      // gymId는 일단 1로 설정 (추후 로그인한 gym의 ID로 변경 가능)
-      const gymId = 1;
+      // 로그인한 계정의 gymId 가져오기
+      const { gymId: authGymId } = getEffectiveAuth();
+      const gymId = authGymId || 1; // gymId가 없으면 기본값 1 사용
       const response = await getMembersApi(gymId);
 
       console.log("회원 목록 조회 응답:", response);

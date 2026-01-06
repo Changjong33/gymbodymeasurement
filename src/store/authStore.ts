@@ -6,10 +6,11 @@ interface AuthState {
   ownerName: string | null;
   email: string | null;
   token: string | null;
-  login: (ownerName: string, email: string, token?: string) => void;
+  gymId: number | null;
+  login: (ownerName: string, email: string, token?: string, gymId?: number) => void;
   logout: () => void;
   isDevMode: () => boolean;
-  getEffectiveAuth: () => { isLoggedIn: boolean; ownerName: string | null; email: string | null };
+  getEffectiveAuth: () => { isLoggedIn: boolean; ownerName: string | null; email: string | null; gymId: number | null };
 }
 
 // 개발 모드 체크 함수
@@ -31,8 +32,10 @@ export const useAuthStore = create<AuthState>()(
       ownerName: null,
       email: null,
       token: null,
-      login: (ownerName: string, email: string, token?: string) => set({ isLoggedIn: true, ownerName, email, token: token || null }),
-      logout: () => set({ isLoggedIn: false, ownerName: null, email: null, token: null }),
+      gymId: null,
+      login: (ownerName: string, email: string, token?: string, gymId?: number) => 
+        set({ isLoggedIn: true, ownerName, email, token: token || null, gymId: gymId || null }),
+      logout: () => set({ isLoggedIn: false, ownerName: null, email: null, token: null, gymId: null }),
       isDevMode: () => isDevMode(),
       getEffectiveAuth: () => {
         const state = get();
@@ -44,6 +47,7 @@ export const useAuthStore = create<AuthState>()(
             isLoggedIn: true,
             ownerName: state.ownerName || devUser.ownerName,
             email: state.email || devUser.email,
+            gymId: state.gymId || 1, // 개발 모드에서는 기본값 1 사용
           };
         }
 
@@ -52,6 +56,7 @@ export const useAuthStore = create<AuthState>()(
           isLoggedIn: state.isLoggedIn,
           ownerName: state.ownerName,
           email: state.email,
+          gymId: state.gymId,
         };
       },
     }),

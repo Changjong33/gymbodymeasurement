@@ -86,8 +86,9 @@ export default function RegisterPage() {
     }
 
     try {
-      // gymId 확인 (일단 1로 설정, 추후 로그인한 gym의 ID로 변경 가능)
-      const gymId = 1;
+      // 로그인한 계정의 gymId 가져오기
+      const { gymId: authGymId } = getEffectiveAuth();
+      const gymId = authGymId || 1; // gymId가 없으면 기본값 1 사용
 
       // 부상 부위를 notes로 변환 (선택사항)
       const notes = injuries.length > 0 ? injuries.join(", ") : undefined;

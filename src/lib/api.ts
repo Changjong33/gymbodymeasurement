@@ -15,7 +15,16 @@ export interface LoginRequest {
 }
 
 export interface LoginResponse {
-  token?: string;
+  accessToken?: string;
+  refreshToken?: string;
+  gym?: {
+    id: number;
+    email: string;
+    gymName?: string;
+    ownerName?: string;
+    createdAt?: string;
+  };
+  token?: string; // 하위 호환성을 위해 유지
   user?: {
     id: string;
     email: string;

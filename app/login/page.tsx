@@ -63,11 +63,12 @@ export default function LoginPage() {
       }
 
       // 응답에서 사용자 정보 추출
-      const ownerName = response.user?.ownerName || response.user?.name || email.split("@")[0];
-      const token = response.token;
+      const ownerName = response.gym?.ownerName || response.user?.ownerName || response.user?.name || email.split("@")[0];
+      const token = response.accessToken || response.token;
+      const gymId = response.gym?.id;
 
       // 인증 상태 업데이트
-      login(ownerName, email, token);
+      login(ownerName, email, token, gymId);
 
       setIsSubmitting(false);
       router.push("/");

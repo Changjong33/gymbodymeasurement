@@ -8,6 +8,23 @@ export const api = axios.create({
   timeout: 10000, // 10초 타임아웃 추가
 });
 
+// 요청 인터셉터: 모든 요청에 JWT 토큰 자동 추가
+api.interceptors.request.use(
+  (config) => {
+    // 클라이언트 사이드에서만 실행
+    if (typeof window !== "undefined") {
+      const token = localStorage.getItem("accessToken");
+      if (token) {
+        config.headers.Authorization = `Bearer ${token}`;
+      }
+    }
+    return config;
+  },
+  (error) => {
+    return Promise.reject(error);
+  }
+);
+
 // 개발 모드 체크 함수
 const isDevMode = (): boolean => {
   if (typeof window === "undefined") return false;
@@ -193,9 +210,7 @@ export const updateMemberApi = async (id: string | number, data: UpdateMemberReq
   if (data.weight !== undefined) requestBody.weight = Number(data.weight);
   if (data.notes !== undefined) {
     // notes가 null이거나 빈 문자열이면 null로 설정 (특이사항 제거)
-    requestBody.notes = data.notes === null || (typeof data.notes === 'string' && !data.notes.trim()) 
-      ? null 
-      : String(data.notes).trim();
+    requestBody.notes = data.notes === null || (typeof data.notes === "string" && !data.notes.trim()) ? null : String(data.notes).trim();
   }
 
   try {

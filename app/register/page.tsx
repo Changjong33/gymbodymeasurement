@@ -4,6 +4,7 @@ import { useState, FormEvent, useEffect } from "react";
 import { useMemberStore } from "@/store/memberStore";
 import { useAuthStore } from "@/store/authStore";
 import { useRouter } from "next/navigation";
+import { createMemberApi } from "@/lib/api";
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -11,6 +12,10 @@ export default function RegisterPage() {
   const addMember = useMemberStore((state) => state.addMember);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
+  const [error, setError] = useState("");
+
+  // 부상 부위 상태
+  const [injuries, setInjuries] = useState<string[]>([]);
 
   // 로그인 체크
   useEffect(() => {
@@ -24,9 +29,20 @@ export default function RegisterPage() {
     return null;
   }
 
+  const handleInjuryChange = (injury: string) => {
+    setInjuries((prev) => {
+      if (prev.includes(injury)) {
+        return prev.filter((item) => item !== injury);
+      } else {
+        return [...prev, injury];
+      }
+    });
+  };
+
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setIsSubmitting(true);
+    setError("");
 
     const formData = new FormData(e.currentTarget);
     const name = formData.get("name") as string;
@@ -37,37 +53,62 @@ export default function RegisterPage() {
 
     // 유효성 검사
     if (!name || !gender || !age || !height || !weight) {
-      alert("모든 필드를 입력해주세요.");
+      setError("모든 필수 필드를 입력해주세요.");
       setIsSubmitting(false);
       return;
     }
 
     if (age <= 0 || height <= 0 || weight <= 0) {
-      alert("나이, 키, 몸무게는 0보다 큰 값을 입력해주세요.");
+      setError("나이, 키, 몸무게는 0보다 큰 값을 입력해주세요.");
       setIsSubmitting(false);
       return;
     }
 
-    // 회원 정보 추가
-    addMember({
-      name,
-      gender,
-      age,
-      height,
-      weight,
-    });
+    try {
+      // 부상 부위를 notes로 변환 (선택사항)
+      const notes = injuries.length > 0 ? injuries.join(", ") : undefined;
 
-    // 성공 메시지 표시
-    setShowSuccess(true);
-    setIsSubmitting(false);
+      // 백엔드 API 호출하여 DB에 저장
+      await createMemberApi({
+        name,
+        gender,
+        height,
+        weight,
+        notes,
+      });
 
-    // 폼 초기화
-    e.currentTarget.reset();
+      // 로컬 스토어에도 추가 (기존 기능 유지)
+      addMember({
+        name,
+        gender,
+        age,
+        height,
+        weight,
+      });
 
-    // 2초 후 성공 메시지 숨기기
-    setTimeout(() => {
-      setShowSuccess(false);
-    }, 3000);
+      // 성공 메시지 표시
+      setShowSuccess(true);
+      setIsSubmitting(false);
+
+      // 폼 초기화
+      e.currentTarget.reset();
+      setInjuries([]);
+
+      // 3초 후 성공 메시지 숨기기
+      setTimeout(() => {
+        setShowSuccess(false);
+      }, 3000);
+    } catch (error: any) {
+      setIsSubmitting(false);
+      // 에러 메시지 처리
+      if (error.response?.data?.message) {
+        setError(error.response.data.message);
+      } else if (error.response?.status === 400) {
+        setError("입력한 정보를 확인해주세요.");
+      } else {
+        setError("회원 등록 중 오류가 발생했습니다. 다시 시도해주세요.");
+      }
+    }
   };
 
   return (
@@ -84,6 +125,13 @@ export default function RegisterPage() {
         <div className="mb-6 bg-green-50 border border-green-200 text-green-800 px-4 py-3 rounded-lg flex items-center gap-2">
           <span className="text-xl">✅</span>
           <span className="font-medium">회원 정보가 성공적으로 등록되었습니다!</span>
+        </div>
+      )}
+
+      {error && (
+        <div className="mb-6 bg-red-50 border border-red-200 text-red-800 px-4 py-3 rounded-lg flex items-center gap-2">
+          <span className="text-xl">❌</span>
+          <span className="font-medium">{error}</span>
         </div>
       )}
 
@@ -166,6 +214,59 @@ export default function RegisterPage() {
                 placeholder="몸무게를 입력하세요"
               />
             </div>
+
+            <div>
+              <label className="block text-gray-700 font-medium mb-2">특이사항 (부상)</label>
+
+              <div className="space-y-3">
+                <div>
+                  <p className="text-sm text-gray-600 mb-2">하체 (선택)</p>
+                  <div className="flex gap-3">
+                    <label className="inline-flex items-center cursor-pointer">
+                      <input type="checkbox" checked={injuries.includes("무릎")} onChange={() => handleInjuryChange("무릎")} className="form-checkbox text-blue-600 rounded" />
+                      <span className="ml-2 text-gray-700">무릎</span>
+                    </label>
+                    <label className="inline-flex items-center cursor-pointer">
+                      <input type="checkbox" checked={injuries.includes("발목")} onChange={() => handleInjuryChange("발목")} className="form-checkbox text-blue-600 rounded" />
+                      <span className="ml-2 text-gray-700">발목</span>
+                    </label>
+                  </div>
+                </div>
+
+                <div>
+                  <p className="text-sm text-gray-600 mb-2">상체 (선택)</p>
+                  <div className="flex gap-3">
+                    <label className="inline-flex items-center cursor-pointer">
+                      <input type="checkbox" checked={injuries.includes("어깨")} onChange={() => handleInjuryChange("어깨")} className="form-checkbox text-blue-600 rounded" />
+                      <span className="ml-2 text-gray-700">어깨</span>
+                    </label>
+                    <label className="inline-flex items-center cursor-pointer">
+                      <input type="checkbox" checked={injuries.includes("가슴")} onChange={() => handleInjuryChange("가슴")} className="form-checkbox text-blue-600 rounded" />
+                      <span className="ml-2 text-gray-700">가슴</span>
+                    </label>
+                    <label className="inline-flex items-center cursor-pointer">
+                      <input type="checkbox" checked={injuries.includes("등")} onChange={() => handleInjuryChange("등")} className="form-checkbox text-blue-600 rounded" />
+                      <span className="ml-2 text-gray-700">등</span>
+                    </label>
+                  </div>
+                </div>
+
+                <div>
+                  <p className="text-sm text-gray-600 mb-2">기타 (선택)</p>
+                  <div className="flex gap-3">
+                    <label className="inline-flex items-center cursor-pointer">
+                      <input type="checkbox" checked={injuries.includes("손목")} onChange={() => handleInjuryChange("손목")} className="form-checkbox text-blue-600 rounded" />
+                      <span className="ml-2 text-gray-700">손목</span>
+                    </label>
+                    <label className="inline-flex items-center cursor-pointer">
+                      <input type="checkbox" checked={injuries.includes("목")} onChange={() => handleInjuryChange("목")} className="form-checkbox text-blue-600 rounded" />
+                      <span className="ml-2 text-gray-700">목</span>
+                    </label>
+                  </div>
+                </div>
+              </div>
+            </div>
+
             <button
               type="submit"
               disabled={isSubmitting}

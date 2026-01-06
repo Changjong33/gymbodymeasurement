@@ -50,3 +50,29 @@ export const signupApi = async (data: SignupRequest): Promise<SignupResponse> =>
   const response = await axios.post<SignupResponse>(`${API_BASE_URL}/auth/signup`, data);
   return response.data;
 };
+
+// 회원 등록 API
+export interface MemberRequest {
+  name: string;
+  gender: "male" | "female";
+  height: number;
+  weight: number;
+  notes?: string;
+}
+
+export interface MemberResponse {
+  message?: string;
+  member?: {
+    id: string;
+    name: string;
+    gender: string;
+    height: number;
+    weight: number;
+    notes?: string;
+  };
+}
+
+export const createMemberApi = async (data: MemberRequest): Promise<MemberResponse> => {
+  const response = await axios.post<MemberResponse>(`${API_BASE_URL}/members`, data);
+  return response.data;
+};

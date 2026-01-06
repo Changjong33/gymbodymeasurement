@@ -51,7 +51,8 @@ export default function ListPage() {
         return;
       }
 
-      const response = await getMembersApi(authGymId);
+      // gymId는 JWT 토큰에서 서버가 자동으로 추출하므로 파라미터로 전달하지 않음
+      const response = await getMembersApi();
 
       if (process.env.NEXT_PUBLIC_APP_ENV === "development" || process.env.NODE_ENV === "development") {
         console.log("회원 목록 조회 응답:", response);

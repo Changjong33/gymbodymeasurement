@@ -16,6 +16,9 @@ api.interceptors.request.use(
       const token = localStorage.getItem("accessToken");
       if (token) {
         config.headers.Authorization = `Bearer ${token}`;
+        devLog("토큰 추가됨:", token.substring(0, 20) + "...");
+      } else {
+        devError("토큰이 없습니다!");
       }
     }
     return config;
@@ -182,9 +185,9 @@ export interface GetMembersResponse {
   timestamp?: string;
 }
 
-export const getMembersApi = async (gymId?: number): Promise<GetMembersResponse> => {
-  const url = gymId ? `/members?gymId=${gymId}` : "/members";
-  const response = await api.get<GetMembersResponse>(url);
+export const getMembersApi = async (): Promise<GetMembersResponse> => {
+  // gymId는 JWT 토큰에서 추출하므로 query 파라미터로 보내지 않음
+  const response = await api.get<GetMembersResponse>("/members");
   return response.data;
 };
 

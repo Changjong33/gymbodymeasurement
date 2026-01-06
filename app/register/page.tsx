@@ -13,9 +13,8 @@ export default function RegisterPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
   const [error, setError] = useState("");
-
-  // 부상 부위 상태
   const [injuries, setInjuries] = useState<string[]>([]);
+  const [showMoreInjuries, setShowMoreInjuries] = useState(false);
 
   // 로그인 체크
   useEffect(() => {
@@ -93,6 +92,7 @@ export default function RegisterPage() {
       // 폼 초기화
       e.currentTarget.reset();
       setInjuries([]);
+      setShowMoreInjuries(false);
 
       // 3초 후 성공 메시지 숨기기
       setTimeout(() => {
@@ -219,51 +219,51 @@ export default function RegisterPage() {
               <label className="block text-gray-700 font-medium mb-2">특이사항 (부상)</label>
 
               <div className="space-y-3">
-                <div>
-                  <p className="text-sm text-gray-600 mb-2">하체 (선택)</p>
-                  <div className="flex gap-3">
-                    <label className="inline-flex items-center cursor-pointer">
-                      <input type="checkbox" checked={injuries.includes("무릎")} onChange={() => handleInjuryChange("무릎")} className="form-checkbox text-blue-600 rounded" />
-                      <span className="ml-2 text-gray-700">무릎</span>
+                {/* 주요 부상 부위 */}
+                <div className="flex flex-wrap gap-3">
+                  {["무릎", "발목", "어깨", "허리", "손목", "목"].map((injury) => (
+                    <label key={injury} className="inline-flex items-center cursor-pointer">
+                      <input type="checkbox" checked={injuries.includes(injury)} onChange={() => handleInjuryChange(injury)} className="form-checkbox text-blue-600 rounded" />
+                      <span className="ml-2 text-gray-700">{injury}</span>
                     </label>
-                    <label className="inline-flex items-center cursor-pointer">
-                      <input type="checkbox" checked={injuries.includes("발목")} onChange={() => handleInjuryChange("발목")} className="form-checkbox text-blue-600 rounded" />
-                      <span className="ml-2 text-gray-700">발목</span>
-                    </label>
-                  </div>
+                  ))}
                 </div>
 
-                <div>
-                  <p className="text-sm text-gray-600 mb-2">상체 (선택)</p>
-                  <div className="flex gap-3">
-                    <label className="inline-flex items-center cursor-pointer">
-                      <input type="checkbox" checked={injuries.includes("어깨")} onChange={() => handleInjuryChange("어깨")} className="form-checkbox text-blue-600 rounded" />
-                      <span className="ml-2 text-gray-700">어깨</span>
-                    </label>
-                    <label className="inline-flex items-center cursor-pointer">
-                      <input type="checkbox" checked={injuries.includes("가슴")} onChange={() => handleInjuryChange("가슴")} className="form-checkbox text-blue-600 rounded" />
-                      <span className="ml-2 text-gray-700">가슴</span>
-                    </label>
-                    <label className="inline-flex items-center cursor-pointer">
-                      <input type="checkbox" checked={injuries.includes("등")} onChange={() => handleInjuryChange("등")} className="form-checkbox text-blue-600 rounded" />
-                      <span className="ml-2 text-gray-700">등</span>
-                    </label>
-                  </div>
-                </div>
+                {/* 더보기 버튼 */}
+                <button type="button" className="text-blue-600 text-sm font-medium focus:outline-none hover:underline" onClick={() => setShowMoreInjuries((prev) => !prev)}>
+                  {showMoreInjuries ? "숨기기 ▲" : "+ 더보기 ▼"}
+                </button>
 
-                <div>
-                  <p className="text-sm text-gray-600 mb-2">기타 (선택)</p>
-                  <div className="flex gap-3">
-                    <label className="inline-flex items-center cursor-pointer">
-                      <input type="checkbox" checked={injuries.includes("손목")} onChange={() => handleInjuryChange("손목")} className="form-checkbox text-blue-600 rounded" />
-                      <span className="ml-2 text-gray-700">손목</span>
-                    </label>
-                    <label className="inline-flex items-center cursor-pointer">
-                      <input type="checkbox" checked={injuries.includes("목")} onChange={() => handleInjuryChange("목")} className="form-checkbox text-blue-600 rounded" />
-                      <span className="ml-2 text-gray-700">목</span>
-                    </label>
+                {/* 추가 부상 부위 */}
+                {showMoreInjuries && (
+                  <div className="flex flex-wrap gap-3 pt-2 border-t border-gray-200">
+                    {[
+                      "고관절",
+                      "발가락",
+                      "햄스트링",
+                      "대퇴사두근",
+                      "종아리",
+                      "아킬레스건",
+                      "골반",
+                      "좌골신경통",
+                      "회전근개",
+                      "팔꿈치",
+                      "이두",
+                      "삼두",
+                      "가슴",
+                      "등",
+                      "광배",
+                      "승모",
+                      "복부",
+                      "옆구리",
+                    ].map((injury) => (
+                      <label key={injury} className="inline-flex items-center cursor-pointer">
+                        <input type="checkbox" checked={injuries.includes(injury)} onChange={() => handleInjuryChange(injury)} className="form-checkbox text-blue-600 rounded" />
+                        <span className="ml-2 text-gray-700">{injury}</span>
+                      </label>
+                    ))}
                   </div>
-                </div>
+                )}
               </div>
             </div>
 

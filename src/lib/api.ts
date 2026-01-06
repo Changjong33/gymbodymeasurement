@@ -156,7 +156,7 @@ export interface UpdateMemberRequest {
   age?: number;
   height?: number;
   weight?: number;
-  notes?: string;
+  notes?: string | null;
 }
 
 export const updateMemberApi = async (id: string | number, data: UpdateMemberRequest): Promise<MemberResponse> => {
@@ -169,7 +169,10 @@ export const updateMemberApi = async (id: string | number, data: UpdateMemberReq
   if (data.height !== undefined) requestBody.height = Number(data.height);
   if (data.weight !== undefined) requestBody.weight = Number(data.weight);
   if (data.notes !== undefined) {
-    requestBody.notes = data.notes && data.notes.trim() ? String(data.notes).trim() : null;
+    // notes가 null이거나 빈 문자열이면 null로 설정 (특이사항 제거)
+    requestBody.notes = data.notes === null || (typeof data.notes === 'string' && !data.notes.trim()) 
+      ? null 
+      : String(data.notes).trim();
   }
 
   try {

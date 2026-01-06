@@ -19,9 +19,7 @@ export default function ListPage() {
   const [isLoading, setIsLoading] = useState(false);
 
   // 검색어에 따라 회원 필터링
-  const filteredMembers = members.filter((member) =>
-    member.name.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredMembers = members.filter((member) => member.name.toLowerCase().includes(searchQuery.toLowerCase()));
 
   // 실제 인증 상태 가져오기 (개발 모드 우회 포함)
   const { isLoggedIn } = getEffectiveAuth();
@@ -37,18 +35,18 @@ export default function ListPage() {
   // 회원 목록 조회 함수
   const fetchMembers = async () => {
     if (!isLoggedIn && !devMode) return;
-    
+
     setIsLoading(true);
     try {
       // gymId는 일단 1로 설정 (추후 로그인한 gym의 ID로 변경 가능)
       const gymId = 1;
       const response = await getMembersApi(gymId);
-      
+
       console.log("회원 목록 조회 응답:", response);
-      
+
       // 응답 구조에 따라 배열 추출
       let membersArray: any[] = [];
-      
+
       // response.data가 배열인 경우 (NestJS 표준 응답 형식)
       if (response.data && Array.isArray(response.data)) {
         membersArray = response.data;
@@ -61,29 +59,23 @@ export default function ListPage() {
       else if (Array.isArray(response)) {
         membersArray = response;
       }
-      
+
       // 백엔드 응답을 프론트엔드 Member 형식으로 변환
       if (Array.isArray(membersArray)) {
         const convertedMembers: Member[] = membersArray.map((member: any) => {
           // height와 weight가 문자열일 수 있으므로 숫자로 변환
-          const height = typeof member.height === 'string' 
-            ? parseFloat(member.height) 
-            : (member.height || 0);
-          const weight = typeof member.weight === 'string' 
-            ? parseFloat(member.weight) 
-            : (member.weight || 0);
-          
+          const height = typeof member.height === "string" ? parseFloat(member.height) : member.height || 0;
+          const weight = typeof member.weight === "string" ? parseFloat(member.weight) : member.weight || 0;
+
           return {
             id: member.id?.toString() || `member_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
             name: member.name || "",
             gender: member.gender === "M" ? "male" : "female",
-            age: typeof member.age === 'number' ? member.age : parseInt(member.age || "0", 10),
+            age: typeof member.age === "number" ? member.age : parseInt(member.age || "0", 10),
             height: height,
             weight: weight,
             notes: member.notes || undefined,
-            createdAt: member.createdAt 
-              ? (typeof member.createdAt === 'string' ? member.createdAt : new Date(member.createdAt).toISOString())
-              : new Date().toISOString(),
+            createdAt: member.createdAt ? (typeof member.createdAt === "string" ? member.createdAt : new Date(member.createdAt).toISOString()) : new Date().toISOString(),
           };
         });
         setMembers(convertedMembers);
@@ -117,7 +109,7 @@ export default function ListPage() {
     try {
       // 백엔드에서 숫자 ID 추출 (id가 "member_xxx" 형식일 수도 있으므로)
       const numericId = id.includes("member_") ? null : parseInt(id, 10);
-      
+
       if (numericId && !isNaN(numericId)) {
         await deleteMemberApi(numericId);
         console.log("회원 삭제 성공");
@@ -125,7 +117,7 @@ export default function ListPage() {
         // 로컬 스토어에서만 삭제 (백엔드에 없는 데이터)
         removeMember(id);
       }
-      
+
       // 목록 다시 불러오기
       await fetchMembers();
     } catch (error: any) {
@@ -208,8 +200,8 @@ export default function ListPage() {
         return;
       }
 
-      // 부상 부위를 notes로 변환 (선택사항)
-      const notes = injuries.length > 0 ? injuries.join(", ") : undefined;
+      // 부상 부위를 notes로 변환 (모든 체크를 해제했을 때도 null로 명시적으로 전송)
+      const notes = injuries.length > 0 ? injuries.join(", ") : null;
 
       // gender 변환: "male" -> "M", "female" -> "F"
       const genderCode: "M" | "F" = gender === "male" ? "M" : "F";
@@ -225,7 +217,7 @@ export default function ListPage() {
           age: age,
           height: Number(height.toFixed(1)),
           weight: Number(weight.toFixed(1)),
-          notes: notes || undefined,
+          notes: notes, // null 또는 문자열 (항상 명시적으로 전송)
         };
 
         await updateMemberApi(numericId, updateData);
@@ -238,7 +230,7 @@ export default function ListPage() {
           age,
           height,
           weight,
-          notes,
+          notes: notes || undefined, // null을 undefined로 변환 (로컬 스토어는 undefined 사용)
         });
       }
 
@@ -319,10 +311,7 @@ export default function ListPage() {
                   />
                   <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400">🔍</span>
                   {searchQuery && (
-                    <button
-                      onClick={() => setSearchQuery("")}
-                      className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                    >
+                    <button onClick={() => setSearchQuery("")} className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600">
                       ✕
                     </button>
                   )}
@@ -356,29 +345,29 @@ export default function ListPage() {
                   </tr>
                 ) : (
                   filteredMembers.map((member) => (
-                  <tr key={member.id} className="border-b border-gray-100 hover:bg-gray-50">
-                    <td className="py-3 px-4 text-gray-700 font-medium">{member.name}</td>
-                    <td className="py-3 px-4 text-gray-600">{member.gender === "male" ? "남" : "여"}</td>
-                    <td className="py-3 px-4 text-gray-600">{member.age}세</td>
-                    <td className="py-3 px-4 text-gray-600">{member.height}cm</td>
-                    <td className="py-3 px-4 text-gray-600">{member.weight}kg</td>
-                    <td className="py-3 px-4 text-gray-600 text-sm max-w-[200px]">
-                      <div className="truncate" title={member.notes || "-"}>
-                        {member.notes || "-"}
-                      </div>
-                    </td>
-                    <td className="py-3 px-4 text-gray-500 text-sm">{new Date(member.createdAt).toLocaleDateString("ko-KR")}</td>
-                    <td className="py-3 px-4">
-                      <div className="flex items-center gap-3">
-                        <button onClick={() => handleEdit(member)} className="text-blue-500 hover:text-blue-700 font-medium text-sm">
-                          수정
-                        </button>
-                        <button onClick={() => handleDelete(member.id, member.name)} className="text-red-500 hover:text-red-700 font-medium text-sm">
-                          삭제
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
+                    <tr key={member.id} className="border-b border-gray-100 hover:bg-gray-50">
+                      <td className="py-3 px-4 text-gray-700 font-medium">{member.name}</td>
+                      <td className="py-3 px-4 text-gray-600">{member.gender === "male" ? "남" : "여"}</td>
+                      <td className="py-3 px-4 text-gray-600">{member.age}세</td>
+                      <td className="py-3 px-4 text-gray-600">{member.height}cm</td>
+                      <td className="py-3 px-4 text-gray-600">{member.weight}kg</td>
+                      <td className="py-3 px-4 text-gray-600 text-sm max-w-[200px]">
+                        <div className="truncate" title={member.notes || "-"}>
+                          {member.notes || "-"}
+                        </div>
+                      </td>
+                      <td className="py-3 px-4 text-gray-500 text-sm">{new Date(member.createdAt).toLocaleDateString("ko-KR")}</td>
+                      <td className="py-3 px-4">
+                        <div className="flex items-center gap-3">
+                          <button onClick={() => handleEdit(member)} className="text-blue-500 hover:text-blue-700 font-medium text-sm">
+                            수정
+                          </button>
+                          <button onClick={() => handleDelete(member.id, member.name)} className="text-red-500 hover:text-red-700 font-medium text-sm">
+                            삭제
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
                   ))
                 )}
               </tbody>
@@ -477,7 +466,7 @@ export default function ListPage() {
 
               <div>
                 <label className="block text-gray-700 font-medium mb-2">특이사항 (부상)</label>
-                
+
                 {!showInjuryToggle ? (
                   <button
                     type="button"
@@ -492,12 +481,7 @@ export default function ListPage() {
                     <div className="flex flex-wrap gap-3">
                       {["무릎", "발목", "어깨", "허리", "손목", "목"].map((injury) => (
                         <label key={injury} className="inline-flex items-center cursor-pointer">
-                          <input
-                            type="checkbox"
-                            checked={injuries.includes(injury)}
-                            onChange={() => handleInjuryChange(injury)}
-                            className="form-checkbox text-blue-600 rounded"
-                          />
+                          <input type="checkbox" checked={injuries.includes(injury)} onChange={() => handleInjuryChange(injury)} className="form-checkbox text-blue-600 rounded" />
                           <span className="ml-2 text-gray-700 text-sm">{injury}</span>
                         </label>
                       ))}
@@ -536,12 +520,7 @@ export default function ListPage() {
                           "옆구리",
                         ].map((injury) => (
                           <label key={injury} className="inline-flex items-center cursor-pointer">
-                            <input
-                              type="checkbox"
-                              checked={injuries.includes(injury)}
-                              onChange={() => handleInjuryChange(injury)}
-                              className="form-checkbox text-blue-600 rounded"
-                            />
+                            <input type="checkbox" checked={injuries.includes(injury)} onChange={() => handleInjuryChange(injury)} className="form-checkbox text-blue-600 rounded" />
                             <span className="ml-2 text-gray-700 text-sm">{injury}</span>
                           </label>
                         ))}

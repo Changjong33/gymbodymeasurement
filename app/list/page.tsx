@@ -41,20 +41,39 @@ export default function ListPage() {
       
       setIsLoading(true);
       try {
-        const response = await getMembersApi();
-        if (response.members) {
+        // gymId는 일단 1로 설정 (추후 로그인한 gym의 ID로 변경 가능)
+        const gymId = 1;
+        const response = await getMembersApi(gymId);
+        
+        console.log("회원 목록 조회 응답:", response);
+        
+        if (response.members && Array.isArray(response.members)) {
           // 백엔드 응답을 프론트엔드 Member 형식으로 변환
-          const convertedMembers: Member[] = response.members.map((member) => ({
-            id: member.id?.toString() || `member_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-            name: member.name || "",
-            gender: member.gender === "M" ? "male" : "female",
-            age: parseInt(member.age || "0"),
-            height: member.height || 0,
-            weight: member.weight || 0,
-            notes: member.notes,
-            createdAt: member.createdAt || new Date().toISOString(),
-          }));
+          const convertedMembers: Member[] = response.members.map((member: any) => {
+            // height와 weight가 문자열일 수 있으므로 숫자로 변환
+            const height = typeof member.height === 'string' 
+              ? parseFloat(member.height) 
+              : (member.height || 0);
+            const weight = typeof member.weight === 'string' 
+              ? parseFloat(member.weight) 
+              : (member.weight || 0);
+            
+            return {
+              id: member.id?.toString() || `member_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+              name: member.name || "",
+              gender: member.gender === "M" ? "male" : "female",
+              age: typeof member.age === 'number' ? member.age : parseInt(member.age || "0", 10),
+              height: height,
+              weight: weight,
+              notes: member.notes || undefined,
+              createdAt: member.createdAt 
+                ? (typeof member.createdAt === 'string' ? member.createdAt : new Date(member.createdAt).toISOString())
+                : new Date().toISOString(),
+            };
+          });
           setMembers(convertedMembers);
+        } else {
+          console.warn("회원 목록이 배열이 아닙니다:", response);
         }
       } catch (error) {
         console.error("회원 목록 조회 실패:", error);

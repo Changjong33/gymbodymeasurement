@@ -139,7 +139,8 @@ export interface GetMembersResponse {
   message?: string;
 }
 
-export const getMembersApi = async (): Promise<GetMembersResponse> => {
-  const response = await axios.get<GetMembersResponse>(`${API_BASE_URL}/members`);
+export const getMembersApi = async (gymId?: number): Promise<GetMembersResponse> => {
+  const url = gymId ? `${API_BASE_URL}/members?gymId=${gymId}` : `${API_BASE_URL}/members`;
+  const response = await axios.get<GetMembersResponse>(url);
   return response.data;
 };

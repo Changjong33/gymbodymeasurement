@@ -2,6 +2,7 @@
 
 import { useState, FormEvent } from "react";
 import { useRouter } from "next/navigation";
+import { signupApi } from "@/lib/api";
 import Link from "next/link";
 
 export default function SignupPage() {
@@ -62,15 +63,31 @@ export default function SignupPage() {
       return;
     }
 
-    // 실제로는 여기서 API 호출하여 회원가입 처리
-    // const response = await api.post('/auth/signup', { email, password, userName });
+    try {
+      // 백엔드 API 호출
+      await signupApi({
+        email,
+        password,
+        userName,
+        gymName,
+      });
 
-    // 임시로 항상 성공 처리
-    setTimeout(() => {
       setIsSubmitting(false);
       alert("회원가입이 완료되었습니다! 로그인 페이지로 이동합니다.");
       router.push("/login");
-    }, 500);
+    } catch (error: any) {
+      setIsSubmitting(false);
+      // 에러 메시지 처리
+      if (error.response?.data?.message) {
+        setError(error.response.data.message);
+      } else if (error.response?.status === 409) {
+        setError("이미 존재하는 이메일입니다.");
+      } else if (error.response?.status === 400) {
+        setError("입력한 정보를 확인해주세요.");
+      } else {
+        setError("회원가입 중 오류가 발생했습니다. 다시 시도해주세요.");
+      }
+    }
   };
 
   return (

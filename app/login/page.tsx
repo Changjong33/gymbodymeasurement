@@ -3,6 +3,7 @@
 import { useState, FormEvent, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuthStore } from "@/store/authStore";
+import { loginApi } from "@/lib/api";
 import Link from "next/link";
 
 const SAVED_EMAIL_KEY = "saved-email";
@@ -47,26 +48,39 @@ export default function LoginPage() {
       return;
     }
 
-    // 임시 로그인 처리 (실제로는 API 호출)
-    // 테스트용: 이메일에서 이름 추출 또는 이메일 앞부분을 이름으로 사용
-    const userName = email.split("@")[0];
+    try {
+      // 백엔드 API 호출
+      const response = await loginApi({ email, password });
 
-    // 실제로는 여기서 API 호출하여 인증
-    // const response = await api.post('/auth/login', { email, password });
+      // 이메일 저장 처리
+      if (saveEmail) {
+        localStorage.setItem(SAVED_EMAIL_KEY, email);
+      } else {
+        localStorage.removeItem(SAVED_EMAIL_KEY);
+      }
 
-    // 이메일 저장 처리
-    if (saveEmail) {
-      localStorage.setItem(SAVED_EMAIL_KEY, email);
-    } else {
-      localStorage.removeItem(SAVED_EMAIL_KEY);
-    }
+      // 응답에서 사용자 정보 추출
+      const userName = response.user?.userName || response.user?.name || email.split("@")[0];
+      const token = response.token;
 
-    // 임시로 항상 성공 처리
-    setTimeout(() => {
-      login(userName);
+      // 인증 상태 업데이트
+      login(userName, email, token);
+
       setIsSubmitting(false);
       router.push("/");
-    }, 500);
+    } catch (error: any) {
+      setIsSubmitting(false);
+      // 에러 메시지 처리
+      if (error.response?.data?.message) {
+        setError(error.response.data.message);
+      } else if (error.response?.status === 401) {
+        setError("이메일 또는 비밀번호가 올바르지 않습니다.");
+      } else if (error.response?.status === 404) {
+        setError("사용자를 찾을 수 없습니다.");
+      } else {
+        setError("로그인 중 오류가 발생했습니다. 다시 시도해주세요.");
+      }
+    }
   };
 
   return (
@@ -143,10 +157,6 @@ export default function LoginPage() {
               </Link>
             </div>
           </form>
-
-          <div className="mt-6 text-center">
-            <p className="text-sm text-gray-600">테스트용: 이메일과 비밀번호를 입력하면 로그인됩니다.</p>
-          </div>
         </div>
       </div>
     </div>

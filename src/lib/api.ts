@@ -79,30 +79,58 @@ export interface MemberResponse {
 }
 
 export const createMemberApi = async (data: MemberRequest): Promise<MemberResponse> => {
-  // notes가 undefined이면 제외하고 전송
+  // 모든 값을 명시적으로 올바른 타입으로 변환
   const requestBody: any = {
-    gymId: data.gymId,
-    name: data.name,
-    gender: data.gender,
-    age: data.age,
-    height: data.height,
-    weight: data.weight,
+    gymId: Number(data.gymId), // 명시적으로 숫자로 변환
+    name: String(data.name).trim(),
+    gender: String(data.gender), // "M" 또는 "F"
+    age: Number(data.age), // 명시적으로 숫자로 변환
+    height: Number(data.height), // 명시적으로 숫자로 변환
+    weight: Number(data.weight), // 명시적으로 숫자로 변환
   };
 
-  // notes가 있으면 추가
-  if (data.notes) {
-    requestBody.notes = data.notes;
+  // notes가 있고 비어있지 않으면 추가
+  if (data.notes && data.notes.trim()) {
+    requestBody.notes = String(data.notes).trim();
   }
 
-  console.log("API 호출 - URL:", `${API_BASE_URL}/members`);
-  console.log("API 호출 - Body:", JSON.stringify(requestBody, null, 2));
-
-  const response = await axios.post<MemberResponse>(`${API_BASE_URL}/members`, requestBody, {
-    headers: {
-      "Content-Type": "application/json",
-    },
+  console.log("=== API 호출 시작 ===");
+  console.log("URL:", `${API_BASE_URL}/members`);
+  console.log("Request Body (JSON):", JSON.stringify(requestBody, null, 2));
+  console.log("Request Body (타입 확인):", {
+    gymId: { value: requestBody.gymId, type: typeof requestBody.gymId, isNaN: isNaN(requestBody.gymId) },
+    name: { value: requestBody.name, type: typeof requestBody.name, length: requestBody.name.length },
+    gender: { value: requestBody.gender, type: typeof requestBody.gender },
+    age: { value: requestBody.age, type: typeof requestBody.age, isNaN: isNaN(requestBody.age) },
+    height: { value: requestBody.height, type: typeof requestBody.height, isNaN: isNaN(requestBody.height) },
+    weight: { value: requestBody.weight, type: typeof requestBody.weight, isNaN: isNaN(requestBody.weight) },
+    notes: requestBody.notes ? { value: requestBody.notes, type: typeof requestBody.notes } : "undefined",
   });
-  return response.data;
+
+  try {
+    const response = await axios.post<MemberResponse>(`${API_BASE_URL}/members`, requestBody, {
+      headers: {
+        "Content-Type": "application/json",
+      },
+    });
+    console.log("=== API 호출 성공 ===");
+    console.log("Response:", response.data);
+    return response.data;
+  } catch (error: any) {
+    console.error("=== API 호출 실패 ===");
+    console.error("Error:", error);
+    console.error("Error Response Data:", error.response?.data);
+    console.error("Error Response Status:", error.response?.status);
+    console.error("Error Response Headers:", error.response?.headers);
+    console.error("Request Config:", {
+      url: error.config?.url,
+      method: error.config?.method,
+      data: error.config?.data,
+    });
+
+    // 에러를 다시 throw하여 상위에서 처리할 수 있도록
+    throw error;
+  }
 };
 
 // 회원 조회 API

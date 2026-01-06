@@ -106,7 +106,8 @@ export default function RegisterPage() {
         notes: notes || undefined, // 빈 문자열이면 undefined
       };
 
-      console.log("회원 등록 시도:", {
+      console.log("=== 회원 등록 시작 ===");
+      console.log("입력 데이터:", {
         name,
         gymId,
         age,
@@ -117,15 +118,18 @@ export default function RegisterPage() {
         apiUrl: process.env.NEXT_PUBLIC_API_URL,
       });
       console.log("전송할 데이터 (타입 확인):", {
-        ...requestData,
-        gymId_type: typeof requestData.gymId,
-        age_type: typeof requestData.age,
-        height_type: typeof requestData.height,
-        weight_type: typeof requestData.weight,
+        gymId: { value: requestData.gymId, type: typeof requestData.gymId },
+        name: { value: requestData.name, type: typeof requestData.name },
+        gender: { value: requestData.gender, type: typeof requestData.gender },
+        age: { value: requestData.age, type: typeof requestData.age },
+        height: { value: requestData.height, type: typeof requestData.height },
+        weight: { value: requestData.weight, type: typeof requestData.weight },
+        notes: requestData.notes ? { value: requestData.notes, type: typeof requestData.notes } : "undefined",
       });
 
       const response = await createMemberApi(requestData);
-      console.log("회원 등록 응답:", response);
+      console.log("=== 회원 등록 성공 ===");
+      console.log("응답:", response);
 
       // 로컬 스토어에도 추가 (기존 기능 유지)
       addMember({
@@ -149,24 +153,48 @@ export default function RegisterPage() {
         setShowSuccess(false);
       }, 3000);
     } catch (error: any) {
-      console.error("회원 등록 에러:", error);
-      console.error("에러 상세:", {
-        message: error.message,
-        response: error.response?.data,
-        status: error.response?.status,
-        url: error.config?.url,
-      });
+      console.error("=== 회원 등록 에러 ===");
+      console.error("Error 객체:", error);
+      console.error("Error Message:", error.message);
+      console.error("Error Code:", error.code);
+      console.error("Error Response Data:", error.response?.data);
+      console.error("Error Response Status:", error.response?.status);
+      console.error("Error Response Headers:", error.response?.headers);
+      console.error("Request URL:", error.config?.url);
+      console.error("Request Data:", error.config?.data);
 
-      // 에러 메시지 처리
-      if (error.response?.data?.message) {
-        setError(error.response.data.message);
+      // 백엔드에서 반환한 상세 에러 메시지 추출
+      let errorMessage = "회원 등록 중 오류가 발생했습니다.";
+
+      if (error.response?.data) {
+        const errorData = error.response.data;
+
+        // 배열 형태의 에러 메시지 처리
+        if (Array.isArray(errorData.message)) {
+          errorMessage = errorData.message.join(", ");
+        }
+        // 문자열 형태의 에러 메시지
+        else if (typeof errorData.message === "string") {
+          errorMessage = errorData.message;
+        }
+        // 객체 형태의 에러 메시지 (validation errors)
+        else if (typeof errorData.message === "object") {
+          const messages = Object.values(errorData.message).flat();
+          errorMessage = messages.join(", ");
+        }
+        // 기타 에러 메시지
+        else if (errorData.error) {
+          errorMessage = errorData.error;
+        }
       } else if (error.response?.status === 400) {
-        setError("입력한 정보를 확인해주세요.");
+        errorMessage = "입력한 정보를 확인해주세요. (400 Bad Request)";
       } else if (error.message === "Network Error" || error.code === "ERR_NETWORK") {
-        setError("네트워크 오류가 발생했습니다. API 서버를 확인해주세요.");
-      } else {
-        setError(`회원 등록 중 오류가 발생했습니다: ${error.message || "알 수 없는 오류"}`);
+        errorMessage = "네트워크 오류가 발생했습니다. API 서버를 확인해주세요.";
+      } else if (error.message) {
+        errorMessage = `오류: ${error.message}`;
       }
+
+      setError(errorMessage);
     } finally {
       // 무조건 실행되어 로딩 상태 해제
       setIsSubmitting(false);

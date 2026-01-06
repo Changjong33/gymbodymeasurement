@@ -57,7 +57,7 @@ export interface MemberRequest {
   gymId: number;
   name: string;
   gender: "M" | "F";
-  age: string;
+  age: number; // 숫자로 변경
   height: number;
   weight: number;
   notes?: string;

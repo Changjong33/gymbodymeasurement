@@ -68,24 +68,44 @@ export default function RegisterPage() {
     }
 
     try {
-      console.log("회원 등록 시도:", { name, apiUrl: process.env.NEXT_PUBLIC_API_URL });
+      // age 유효성 검사 (0 이상 150 이하)
+      if (age < 0 || age > 150) {
+        setError("나이는 0 이상 150 이하여야 합니다.");
+        setIsSubmitting(false);
+        return;
+      }
+
+      // gymId 확인 (일단 1로 설정, 추후 로그인한 gym의 ID로 변경 가능)
+      const gymId = 1;
+
+      console.log("회원 등록 시도:", {
+        name,
+        gymId,
+        age,
+        gender,
+        apiUrl: process.env.NEXT_PUBLIC_API_URL,
+      });
 
       // 부상 부위를 notes로 변환 (선택사항)
       const notes = injuries.length > 0 ? injuries.join(", ") : undefined;
 
       // gender 변환: "male" -> "M", "female" -> "F"
-      const genderCode = gender === "male" ? "M" : "F";
+      const genderCode: "M" | "F" = gender === "male" ? "M" : "F";
 
-      // 백엔드 API 호출하여 DB에 저장
-      const response = await createMemberApi({
-        gymId: 1,
-        name,
+      // 백엔드 API 호출하여 DB에 저장 (age는 숫자로 전송)
+      const requestData = {
+        gymId: gymId,
+        name: name,
         gender: genderCode,
-        age: age.toString(),
-        height,
-        weight,
-        notes,
-      });
+        age: age, // 숫자로 전송
+        height: height,
+        weight: weight,
+        notes: notes,
+      };
+
+      console.log("전송할 데이터:", requestData);
+
+      const response = await createMemberApi(requestData);
       console.log("회원 등록 응답:", response);
 
       // 로컬 스토어에도 추가 (기존 기능 유지)

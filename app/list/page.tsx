@@ -43,7 +43,9 @@ export default function ListPage() {
 
       // gymId가 없으면 회원 조회 불가
       if (!authGymId) {
-        console.error("gymId가 없습니다. 로그인 상태를 확인해주세요.");
+        if (process.env.NEXT_PUBLIC_APP_ENV === "development" || process.env.NODE_ENV === "development") {
+          console.error("gymId가 없습니다. 로그인 상태를 확인해주세요.");
+        }
         setMembers([]);
         setIsLoading(false);
         return;
@@ -51,7 +53,9 @@ export default function ListPage() {
 
       const response = await getMembersApi(authGymId);
 
-      console.log("회원 목록 조회 응답:", response);
+      if (process.env.NEXT_PUBLIC_APP_ENV === "development" || process.env.NODE_ENV === "development") {
+        console.log("회원 목록 조회 응답:", response);
+      }
 
       // 응답 구조에 따라 배열 추출
       let membersArray: any[] = [];
@@ -89,11 +93,15 @@ export default function ListPage() {
         });
         setMembers(convertedMembers);
       } else {
-        console.warn("회원 목록이 배열이 아닙니다:", response);
+        if (process.env.NEXT_PUBLIC_APP_ENV === "development" || process.env.NODE_ENV === "development") {
+          console.warn("회원 목록이 배열이 아닙니다:", response);
+        }
         setMembers([]);
       }
     } catch (error) {
-      console.error("회원 목록 조회 실패:", error);
+      if (process.env.NEXT_PUBLIC_APP_ENV === "development" || process.env.NODE_ENV === "development") {
+        console.error("회원 목록 조회 실패:", error);
+      }
     } finally {
       setIsLoading(false);
     }
@@ -121,7 +129,9 @@ export default function ListPage() {
 
       if (numericId && !isNaN(numericId)) {
         await deleteMemberApi(numericId);
-        console.log("회원 삭제 성공");
+        if (process.env.NEXT_PUBLIC_APP_ENV === "development" || process.env.NODE_ENV === "development") {
+          console.log("회원 삭제 성공");
+        }
       } else {
         // 로컬 스토어에서만 삭제 (백엔드에 없는 데이터)
         removeMember(id);
@@ -130,7 +140,9 @@ export default function ListPage() {
       // 목록 다시 불러오기
       await fetchMembers();
     } catch (error: any) {
-      console.error("회원 삭제 실패:", error);
+      if (process.env.NEXT_PUBLIC_APP_ENV === "development" || process.env.NODE_ENV === "development") {
+        console.error("회원 삭제 실패:", error);
+      }
       alert(`회원 삭제 중 오류가 발생했습니다: ${error.response?.data?.message || error.message}`);
     }
   };
@@ -230,7 +242,9 @@ export default function ListPage() {
         };
 
         await updateMemberApi(numericId, updateData);
-        console.log("회원 수정 성공");
+        if (process.env.NEXT_PUBLIC_APP_ENV === "development" || process.env.NODE_ENV === "development") {
+          console.log("회원 수정 성공");
+        }
       } else {
         // 로컬 스토어에서만 업데이트 (백엔드에 없는 데이터)
         updateMember(editingMember.id, {
@@ -252,7 +266,9 @@ export default function ListPage() {
       setShowInjuryToggle(false);
       setShowMoreInjuries(false);
     } catch (error: any) {
-      console.error("회원 수정 실패:", error);
+      if (process.env.NEXT_PUBLIC_APP_ENV === "development" || process.env.NODE_ENV === "development") {
+        console.error("회원 수정 실패:", error);
+      }
       alert(`회원 수정 중 오류가 발생했습니다: ${error.response?.data?.message || error.message}`);
     } finally {
       setIsSubmitting(false);

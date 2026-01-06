@@ -1,12 +1,31 @@
 import axios from "axios";
 
+// API 기본 URL (환경변수가 없을 경우 기본값 사용)
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "https://portfolio-fitspec.onrender.com";
+
 export const api = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_API_URL,
+  baseURL: API_BASE_URL,
   timeout: 10000, // 10초 타임아웃 추가
 });
 
-// API 기본 URL (환경변수가 없을 경우 기본값 사용)
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "https://portfolio-fitspec.onrender.com";
+// 개발 모드 체크 함수
+const isDevMode = (): boolean => {
+  if (typeof window === "undefined") return false;
+  return process.env.NEXT_PUBLIC_APP_ENV === "development" || process.env.NODE_ENV === "development";
+};
+
+// 조건부 로깅 함수
+const devLog = (...args: any[]) => {
+  if (isDevMode()) {
+    console.log(...args);
+  }
+};
+
+const devError = (...args: any[]) => {
+  if (isDevMode()) {
+    console.error(...args);
+  }
+};
 
 // 로그인 API
 export interface LoginRequest {
@@ -14,7 +33,15 @@ export interface LoginRequest {
   password: string;
 }
 
-export interface LoginResponse {
+// TransformInterceptor로 래핑된 응답 타입
+export interface WrappedResponse<T> {
+  statusCode: number;
+  data: T;
+  timestamp: string;
+  message?: string;
+}
+
+export interface LoginResponseData {
   accessToken?: string;
   refreshToken?: string;
   gym?: {
@@ -34,8 +61,10 @@ export interface LoginResponse {
   message?: string;
 }
 
+export type LoginResponse = WrappedResponse<LoginResponseData> | LoginResponseData;
+
 export const loginApi = async (data: LoginRequest): Promise<LoginResponse> => {
-  const response = await axios.post<LoginResponse>(`${API_BASE_URL}/auth/login`, data);
+  const response = await api.post<LoginResponse>("/auth/login", data);
   return response.data;
 };
 
@@ -57,7 +86,7 @@ export interface SignupResponse {
 }
 
 export const signupApi = async (data: SignupRequest): Promise<SignupResponse> => {
-  const response = await axios.post<SignupResponse>(`${API_BASE_URL}/auth/signup`, data);
+  const response = await api.post<SignupResponse>("/auth/signup", data);
   return response.data;
 };
 
@@ -103,39 +132,24 @@ export const createMemberApi = async (data: MemberRequest): Promise<MemberRespon
     requestBody.notes = String(data.notes).trim();
   }
 
-  console.log("=== API 호출 시작 ===");
-  console.log("URL:", `${API_BASE_URL}/members`);
-  console.log("Request Body (JSON):", JSON.stringify(requestBody, null, 2));
-  console.log("Request Body (타입 확인):", {
-    gymId: { value: requestBody.gymId, type: typeof requestBody.gymId, isNaN: isNaN(requestBody.gymId) },
-    name: { value: requestBody.name, type: typeof requestBody.name, length: requestBody.name.length },
-    gender: { value: requestBody.gender, type: typeof requestBody.gender },
-    age: { value: requestBody.age, type: typeof requestBody.age, isNaN: isNaN(requestBody.age) },
-    height: { value: requestBody.height, type: typeof requestBody.height, isNaN: isNaN(requestBody.height) },
-    weight: { value: requestBody.weight, type: typeof requestBody.weight, isNaN: isNaN(requestBody.weight) },
-    notes: requestBody.notes ? { value: requestBody.notes, type: typeof requestBody.notes } : "undefined",
-  });
+  devLog("=== API 호출 시작 ===");
+  devLog("URL:", "/members");
+  devLog("Request Body:", requestBody);
 
   try {
-    const response = await axios.post<MemberResponse>(`${API_BASE_URL}/members`, requestBody, {
+    const response = await api.post<MemberResponse>("/members", requestBody, {
       headers: {
         "Content-Type": "application/json",
       },
     });
-    console.log("=== API 호출 성공 ===");
-    console.log("Response:", response.data);
+    devLog("=== API 호출 성공 ===");
+    devLog("Response:", response.data);
     return response.data;
   } catch (error: any) {
-    console.error("=== API 호출 실패 ===");
-    console.error("Error:", error);
-    console.error("Error Response Data:", error.response?.data);
-    console.error("Error Response Status:", error.response?.status);
-    console.error("Error Response Headers:", error.response?.headers);
-    console.error("Request Config:", {
-      url: error.config?.url,
-      method: error.config?.method,
-      data: error.config?.data,
-    });
+    devError("=== API 호출 실패 ===");
+    devError("Error:", error);
+    devError("Error Response Data:", error.response?.data);
+    devError("Error Response Status:", error.response?.status);
 
     // 에러를 다시 throw하여 상위에서 처리할 수 있도록
     throw error;
@@ -152,8 +166,8 @@ export interface GetMembersResponse {
 }
 
 export const getMembersApi = async (gymId?: number): Promise<GetMembersResponse> => {
-  const url = gymId ? `${API_BASE_URL}/members?gymId=${gymId}` : `${API_BASE_URL}/members`;
-  const response = await axios.get<GetMembersResponse>(url);
+  const url = gymId ? `/members?gymId=${gymId}` : "/members";
+  const response = await api.get<GetMembersResponse>(url);
   return response.data;
 };
 
@@ -185,16 +199,16 @@ export const updateMemberApi = async (id: string | number, data: UpdateMemberReq
   }
 
   try {
-    const response = await axios.patch<MemberResponse>(`${API_BASE_URL}/members/${id}`, requestBody, {
+    const response = await api.patch<MemberResponse>(`/members/${id}`, requestBody, {
       headers: {
         "Content-Type": "application/json",
       },
     });
     return response.data;
   } catch (error: any) {
-    console.error("=== 회원 수정 API 호출 실패 ===");
-    console.error("Error:", error);
-    console.error("Error Response Data:", error.response?.data);
+    devError("=== 회원 수정 API 호출 실패 ===");
+    devError("Error:", error);
+    devError("Error Response Data:", error.response?.data);
     throw error;
   }
 };
@@ -208,12 +222,12 @@ export interface DeleteMemberResponse {
 
 export const deleteMemberApi = async (id: string | number): Promise<DeleteMemberResponse> => {
   try {
-    const response = await axios.delete<DeleteMemberResponse>(`${API_BASE_URL}/members/${id}`);
+    const response = await api.delete<DeleteMemberResponse>(`/members/${id}`);
     return response.data;
   } catch (error: any) {
-    console.error("=== 회원 삭제 API 호출 실패 ===");
-    console.error("Error:", error);
-    console.error("Error Response Data:", error.response?.data);
+    devError("=== 회원 삭제 API 호출 실패 ===");
+    devError("Error:", error);
+    devError("Error Response Data:", error.response?.data);
     throw error;
   }
 };

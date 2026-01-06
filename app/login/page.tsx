@@ -49,11 +49,16 @@ export default function LoginPage() {
     }
 
     try {
-      console.log("로그인 시도:", { email, apiUrl: process.env.NEXT_PUBLIC_API_URL });
+      if (process.env.NEXT_PUBLIC_APP_ENV === "development" || process.env.NODE_ENV === "development") {
+        console.log("로그인 시도:", { email });
+      }
 
       // 백엔드 API 호출
       const response = await loginApi({ email, password });
-      console.log("로그인 응답:", response);
+      
+      if (process.env.NEXT_PUBLIC_APP_ENV === "development" || process.env.NODE_ENV === "development") {
+        console.log("로그인 응답:", response);
+      }
 
       // 이메일 저장 처리
       if (saveEmail) {
@@ -63,23 +68,27 @@ export default function LoginPage() {
       }
 
       // 응답에서 사용자 정보 추출 (TransformInterceptor로 래핑되어 data 안에 있음)
-      const responseData = (response as any).data || response;
+      const responseData = 'data' in response && response.data ? response.data : response;
       const ownerName = responseData.gym?.ownerName || responseData.user?.ownerName || responseData.user?.name || email.split("@")[0];
       const token = responseData.accessToken || responseData.token;
       const gymId = responseData.gym?.id;
 
-      console.log("로그인 응답 상세:", {
-        response,
-        responseData,
-        gym: responseData.gym,
-        gymId: gymId,
-        ownerName,
-        email,
-      });
+      if (process.env.NEXT_PUBLIC_APP_ENV === "development" || process.env.NODE_ENV === "development") {
+        console.log("로그인 응답 상세:", {
+          response,
+          responseData,
+          gym: responseData.gym,
+          gymId: gymId,
+          ownerName,
+          email,
+        });
+      }
 
       // gymId가 없으면 에러
       if (!gymId) {
-        console.error("gymId가 응답에 없습니다:", response);
+        if (process.env.NEXT_PUBLIC_APP_ENV === "development" || process.env.NODE_ENV === "development") {
+          console.error("gymId가 응답에 없습니다:", response);
+        }
         setError("로그인 정보를 가져올 수 없습니다. 다시 시도해주세요.");
         setIsSubmitting(false);
         return;
@@ -91,13 +100,15 @@ export default function LoginPage() {
       setIsSubmitting(false);
       router.push("/");
     } catch (error: any) {
-      console.error("로그인 에러:", error);
-      console.error("에러 상세:", {
-        message: error.message,
-        response: error.response?.data,
-        status: error.response?.status,
-        url: error.config?.url,
-      });
+      if (process.env.NEXT_PUBLIC_APP_ENV === "development" || process.env.NODE_ENV === "development") {
+        console.error("로그인 에러:", error);
+        console.error("에러 상세:", {
+          message: error.message,
+          response: error.response?.data,
+          status: error.response?.status,
+          url: error.config?.url,
+        });
+      }
 
       // 에러 메시지 처리
       if (error.response?.data?.message) {

@@ -115,30 +115,25 @@ export default function RegisterPage() {
         notes: notes || undefined, // 빈 문자열이면 undefined
       };
 
-      console.log("=== 회원 등록 시작 ===");
-      console.log("입력 데이터:", {
-        name,
-        gymId,
-        age,
-        gender: genderCode,
-        height,
-        weight,
-        notes,
-        apiUrl: process.env.NEXT_PUBLIC_API_URL,
-      });
-      console.log("전송할 데이터 (타입 확인):", {
-        gymId: { value: requestData.gymId, type: typeof requestData.gymId },
-        name: { value: requestData.name, type: typeof requestData.name },
-        gender: { value: requestData.gender, type: typeof requestData.gender },
-        age: { value: requestData.age, type: typeof requestData.age },
-        height: { value: requestData.height, type: typeof requestData.height },
-        weight: { value: requestData.weight, type: typeof requestData.weight },
-        notes: requestData.notes ? { value: requestData.notes, type: typeof requestData.notes } : "undefined",
-      });
+      if (process.env.NEXT_PUBLIC_APP_ENV === "development" || process.env.NODE_ENV === "development") {
+        console.log("=== 회원 등록 시작 ===");
+        console.log("입력 데이터:", {
+          name,
+          gymId,
+          age,
+          gender: genderCode,
+          height,
+          weight,
+          notes,
+        });
+      }
 
       const response = await createMemberApi(requestData);
-      console.log("=== 회원 등록 성공 ===");
-      console.log("응답:", response);
+
+      if (process.env.NEXT_PUBLIC_APP_ENV === "development" || process.env.NODE_ENV === "development") {
+        console.log("=== 회원 등록 성공 ===");
+        console.log("응답:", response);
+      }
 
       // 로컬 스토어에도 추가 (기존 기능 유지)
       addMember({
@@ -158,7 +153,9 @@ export default function RegisterPage() {
           e.currentTarget.reset();
         }
       } catch (resetError) {
-        console.warn("폼 리셋 중 오류:", resetError);
+        if (process.env.NEXT_PUBLIC_APP_ENV === "development" || process.env.NODE_ENV === "development") {
+          console.warn("폼 리셋 중 오류:", resetError);
+        }
       }
       setInjuries([]);
       setShowMoreInjuries(false);
@@ -168,15 +165,12 @@ export default function RegisterPage() {
         setShowSuccess(false);
       }, 3000);
     } catch (error: any) {
-      console.error("=== 회원 등록 에러 ===");
-      console.error("Error 객체:", error);
-      console.error("Error Message:", error.message);
-      console.error("Error Code:", error.code);
-      console.error("Error Response Data:", error.response?.data);
-      console.error("Error Response Status:", error.response?.status);
-      console.error("Error Response Headers:", error.response?.headers);
-      console.error("Request URL:", error.config?.url);
-      console.error("Request Data:", error.config?.data);
+      if (process.env.NEXT_PUBLIC_APP_ENV === "development" || process.env.NODE_ENV === "development") {
+        console.error("=== 회원 등록 에러 ===");
+        console.error("Error:", error);
+        console.error("Error Response Data:", error.response?.data);
+        console.error("Error Response Status:", error.response?.status);
+      }
 
       // 백엔드에서 반환한 상세 에러 메시지 추출
       let errorMessage = "회원 등록 중 오류가 발생했습니다.";

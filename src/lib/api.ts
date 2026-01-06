@@ -2,6 +2,7 @@ import axios from "axios";
 
 export const api = axios.create({
   baseURL: process.env.NEXT_PUBLIC_API_URL,
+  timeout: 10000, // 10초 타임아웃 추가
 });
 
 // API 기본 URL (환경변수가 없을 경우 기본값 사용)

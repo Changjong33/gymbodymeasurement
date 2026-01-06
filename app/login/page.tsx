@@ -49,8 +49,11 @@ export default function LoginPage() {
     }
 
     try {
+      console.log("로그인 시도:", { email, apiUrl: process.env.NEXT_PUBLIC_API_URL });
+
       // 백엔드 API 호출
       const response = await loginApi({ email, password });
+      console.log("로그인 응답:", response);
 
       // 이메일 저장 처리
       if (saveEmail) {
@@ -69,7 +72,14 @@ export default function LoginPage() {
       setIsSubmitting(false);
       router.push("/");
     } catch (error: any) {
-      setIsSubmitting(false);
+      console.error("로그인 에러:", error);
+      console.error("에러 상세:", {
+        message: error.message,
+        response: error.response?.data,
+        status: error.response?.status,
+        url: error.config?.url,
+      });
+
       // 에러 메시지 처리
       if (error.response?.data?.message) {
         setError(error.response.data.message);
@@ -77,9 +87,14 @@ export default function LoginPage() {
         setError("이메일 또는 비밀번호가 올바르지 않습니다.");
       } else if (error.response?.status === 404) {
         setError("사용자를 찾을 수 없습니다.");
+      } else if (error.message === "Network Error" || error.code === "ERR_NETWORK") {
+        setError("네트워크 오류가 발생했습니다. API 서버를 확인해주세요.");
       } else {
-        setError("로그인 중 오류가 발생했습니다. 다시 시도해주세요.");
+        setError(`로그인 중 오류가 발생했습니다: ${error.message || "알 수 없는 오류"}`);
       }
+    } finally {
+      // 무조건 실행되어 로딩 상태 해제
+      setIsSubmitting(false);
     }
   };
 

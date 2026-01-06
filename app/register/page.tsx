@@ -68,6 +68,8 @@ export default function RegisterPage() {
     }
 
     try {
+      console.log("회원 등록 시도:", { name, apiUrl: process.env.NEXT_PUBLIC_API_URL });
+
       // 부상 부위를 notes로 변환 (선택사항)
       const notes = injuries.length > 0 ? injuries.join(", ") : undefined;
 
@@ -75,7 +77,7 @@ export default function RegisterPage() {
       const genderCode = gender === "male" ? "M" : "F";
 
       // 백엔드 API 호출하여 DB에 저장
-      await createMemberApi({
+      const response = await createMemberApi({
         gymId: 1,
         name,
         gender: genderCode,
@@ -84,6 +86,7 @@ export default function RegisterPage() {
         weight,
         notes,
       });
+      console.log("회원 등록 응답:", response);
 
       // 로컬 스토어에도 추가 (기존 기능 유지)
       addMember({
@@ -96,7 +99,6 @@ export default function RegisterPage() {
 
       // 성공 메시지 표시
       setShowSuccess(true);
-      setIsSubmitting(false);
 
       // 폼 초기화
       e.currentTarget.reset();
@@ -108,15 +110,27 @@ export default function RegisterPage() {
         setShowSuccess(false);
       }, 3000);
     } catch (error: any) {
-      setIsSubmitting(false);
+      console.error("회원 등록 에러:", error);
+      console.error("에러 상세:", {
+        message: error.message,
+        response: error.response?.data,
+        status: error.response?.status,
+        url: error.config?.url,
+      });
+
       // 에러 메시지 처리
       if (error.response?.data?.message) {
         setError(error.response.data.message);
       } else if (error.response?.status === 400) {
         setError("입력한 정보를 확인해주세요.");
+      } else if (error.message === "Network Error" || error.code === "ERR_NETWORK") {
+        setError("네트워크 오류가 발생했습니다. API 서버를 확인해주세요.");
       } else {
-        setError("회원 등록 중 오류가 발생했습니다. 다시 시도해주세요.");
+        setError(`회원 등록 중 오류가 발생했습니다: ${error.message || "알 수 없는 오류"}`);
       }
+    } finally {
+      // 무조건 실행되어 로딩 상태 해제
+      setIsSubmitting(false);
     }
   };
 

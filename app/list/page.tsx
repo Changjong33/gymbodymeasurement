@@ -4,23 +4,70 @@ import { useState, FormEvent, useEffect } from "react";
 import { useMemberStore, Member } from "@/store/memberStore";
 import { useAuthStore } from "@/store/authStore";
 import { useRouter } from "next/navigation";
+import { getMembersApi } from "@/lib/api";
 
 export default function ListPage() {
   const router = useRouter();
-  const { isLoggedIn } = useAuthStore();
-  const { members, removeMember, updateMember } = useMemberStore();
+  const { getEffectiveAuth, isDevMode } = useAuthStore();
+  const { members, removeMember, updateMember, setMembers } = useMemberStore();
   const [editingMember, setEditingMember] = useState<Member | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [injuries, setInjuries] = useState<string[]>([]);
+  const [showInjuryToggle, setShowInjuryToggle] = useState(false);
+  const [showMoreInjuries, setShowMoreInjuries] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
 
-  // 로그인 체크
+  // 검색어에 따라 회원 필터링
+  const filteredMembers = members.filter((member) =>
+    member.name.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  // 실제 인증 상태 가져오기 (개발 모드 우회 포함)
+  const { isLoggedIn } = getEffectiveAuth();
+  const devMode = isDevMode();
+
+  // 로그인 체크 (개발 모드에서는 우회)
   useEffect(() => {
-    if (!isLoggedIn) {
+    if (!isLoggedIn && !devMode) {
       router.push("/login");
     }
-  }, [isLoggedIn, router]);
+  }, [isLoggedIn, devMode, router]);
 
-  // 로그인하지 않은 경우 아무것도 렌더링하지 않음
-  if (!isLoggedIn) {
+  // 회원 목록 조회
+  useEffect(() => {
+    const fetchMembers = async () => {
+      if (!isLoggedIn && !devMode) return;
+      
+      setIsLoading(true);
+      try {
+        const response = await getMembersApi();
+        if (response.members) {
+          // 백엔드 응답을 프론트엔드 Member 형식으로 변환
+          const convertedMembers: Member[] = response.members.map((member) => ({
+            id: member.id?.toString() || `member_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+            name: member.name || "",
+            gender: member.gender === "M" ? "male" : "female",
+            age: parseInt(member.age || "0"),
+            height: member.height || 0,
+            weight: member.weight || 0,
+            notes: member.notes,
+            createdAt: member.createdAt || new Date().toISOString(),
+          }));
+          setMembers(convertedMembers);
+        }
+      } catch (error) {
+        console.error("회원 목록 조회 실패:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchMembers();
+  }, [isLoggedIn, devMode, setMembers]);
+
+  // 로그인하지 않은 경우 아무것도 렌더링하지 않음 (개발 모드 제외)
+  if (!isLoggedIn && !devMode) {
     return null;
   }
 
@@ -32,10 +79,30 @@ export default function ListPage() {
 
   const handleEdit = (member: Member) => {
     setEditingMember({ ...member });
+    // 기존 특이사항을 배열로 변환
+    if (member.notes) {
+      setInjuries(member.notes.split(", "));
+    } else {
+      setInjuries([]);
+    }
+    setShowInjuryToggle(false);
   };
 
   const handleCloseModal = () => {
     setEditingMember(null);
+    setInjuries([]);
+    setShowInjuryToggle(false);
+    setShowMoreInjuries(false);
+  };
+
+  const handleInjuryChange = (injury: string) => {
+    setInjuries((prev) => {
+      if (prev.includes(injury)) {
+        return prev.filter((item) => item !== injury);
+      } else {
+        return [...prev, injury];
+      }
+    });
   };
 
   const handleUpdate = (e: FormEvent<HTMLFormElement>) => {
@@ -64,16 +131,23 @@ export default function ListPage() {
       return;
     }
 
+    // 부상 부위를 notes로 변환 (선택사항)
+    const notes = injuries.length > 0 ? injuries.join(", ") : undefined;
+
     updateMember(editingMember.id, {
       name,
       gender,
       age,
       height,
       weight,
+      notes,
     });
 
     setIsSubmitting(false);
     setEditingMember(null);
+    setInjuries([]);
+    setShowInjuryToggle(false);
+    setShowMoreInjuries(false);
   };
 
   const handleExport = () => {
@@ -99,7 +173,16 @@ export default function ListPage() {
         <p className="text-gray-600 text-lg ml-12">등록된 모든 회원 정보를 조회하고 관리합니다</p>
       </div>
 
-      {members.length === 0 ? (
+      {isLoading ? (
+        <div className="bg-white rounded-xl shadow-lg border border-gray-200 p-8">
+          <div className="text-center py-12">
+            <div className="w-24 h-24 bg-gradient-to-br from-purple-100 to-purple-200 rounded-full flex items-center justify-center mx-auto mb-4">
+              <span className="text-5xl">⏳</span>
+            </div>
+            <h2 className="text-2xl font-semibold text-gray-700 mb-2">회원 정보를 불러오는 중...</h2>
+          </div>
+        </div>
+      ) : members.length === 0 ? (
         <div className="bg-white rounded-xl shadow-lg border border-gray-200 p-8">
           <div className="text-center py-12">
             <div className="w-24 h-24 bg-gradient-to-br from-purple-100 to-purple-200 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -111,9 +194,34 @@ export default function ListPage() {
         </div>
       ) : (
         <div className="bg-white rounded-xl shadow-lg border border-gray-200 p-6">
-          <div className="mb-4 flex items-center justify-between">
-            <h2 className="text-xl font-semibold text-gray-700">총 {members.length}명의 회원</h2>
-            <button onClick={handleExport} className="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors text-sm font-medium">
+          <div className="mb-4 flex items-center justify-between gap-4 flex-wrap">
+            <div className="flex items-center gap-4 flex-1 min-w-[300px]">
+              <h2 className="text-xl font-semibold text-gray-700 whitespace-nowrap">
+                총 {filteredMembers.length}명의 회원
+                {searchQuery && ` (검색 결과: ${filteredMembers.length}명)`}
+              </h2>
+              <div className="flex-1 max-w-md">
+                <div className="relative">
+                  <input
+                    type="text"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    placeholder="회원 이름으로 검색..."
+                    className="w-full border border-gray-300 rounded-md px-4 py-2 pl-10 outline-none focus:ring-2 focus:ring-blue-200 focus:border-blue-500 text-sm"
+                  />
+                  <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400">🔍</span>
+                  {searchQuery && (
+                    <button
+                      onClick={() => setSearchQuery("")}
+                      className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                    >
+                      ✕
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+            <button onClick={handleExport} className="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors text-sm font-medium whitespace-nowrap">
               📥 데이터 내보내기 (JSON)
             </button>
           </div>
@@ -126,18 +234,31 @@ export default function ListPage() {
                   <th className="text-left py-3 px-4 font-semibold text-gray-700">나이</th>
                   <th className="text-left py-3 px-4 font-semibold text-gray-700">키(cm)</th>
                   <th className="text-left py-3 px-4 font-semibold text-gray-700">몸무게(kg)</th>
+                  <th className="text-left py-3 px-4 font-semibold text-gray-700">특이사항</th>
                   <th className="text-left py-3 px-4 font-semibold text-gray-700">등록일</th>
                   <th className="text-left py-3 px-4 font-semibold text-gray-700">관리</th>
                 </tr>
               </thead>
               <tbody>
-                {members.map((member) => (
+                {filteredMembers.length === 0 ? (
+                  <tr>
+                    <td colSpan={7} className="py-8 text-center text-gray-500">
+                      검색 결과가 없습니다.
+                    </td>
+                  </tr>
+                ) : (
+                  filteredMembers.map((member) => (
                   <tr key={member.id} className="border-b border-gray-100 hover:bg-gray-50">
                     <td className="py-3 px-4 text-gray-700 font-medium">{member.name}</td>
                     <td className="py-3 px-4 text-gray-600">{member.gender === "male" ? "남" : "여"}</td>
                     <td className="py-3 px-4 text-gray-600">{member.age}세</td>
                     <td className="py-3 px-4 text-gray-600">{member.height}cm</td>
                     <td className="py-3 px-4 text-gray-600">{member.weight}kg</td>
+                    <td className="py-3 px-4 text-gray-600 text-sm max-w-[200px]">
+                      <div className="truncate" title={member.notes || "-"}>
+                        {member.notes || "-"}
+                      </div>
+                    </td>
                     <td className="py-3 px-4 text-gray-500 text-sm">{new Date(member.createdAt).toLocaleDateString("ko-KR")}</td>
                     <td className="py-3 px-4">
                       <div className="flex items-center gap-3">
@@ -150,7 +271,8 @@ export default function ListPage() {
                       </div>
                     </td>
                   </tr>
-                ))}
+                  ))
+                )}
               </tbody>
             </table>
           </div>
@@ -244,6 +366,83 @@ export default function ListPage() {
                   placeholder="몸무게를 입력하세요"
                 />
               </div>
+
+              <div>
+                <label className="block text-gray-700 font-medium mb-2">특이사항 (부상)</label>
+                
+                {!showInjuryToggle ? (
+                  <button
+                    type="button"
+                    onClick={() => setShowInjuryToggle(true)}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 transition-colors text-sm font-medium"
+                  >
+                    + 추가하기
+                  </button>
+                ) : (
+                  <div className="space-y-3">
+                    {/* 주요 부상 부위 */}
+                    <div className="flex flex-wrap gap-3">
+                      {["무릎", "발목", "어깨", "허리", "손목", "목"].map((injury) => (
+                        <label key={injury} className="inline-flex items-center cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={injuries.includes(injury)}
+                            onChange={() => handleInjuryChange(injury)}
+                            className="form-checkbox text-blue-600 rounded"
+                          />
+                          <span className="ml-2 text-gray-700 text-sm">{injury}</span>
+                        </label>
+                      ))}
+                    </div>
+
+                    {/* 더보기 버튼 */}
+                    <button
+                      type="button"
+                      className="text-blue-600 text-sm font-medium focus:outline-none hover:underline transition-all duration-300"
+                      onClick={() => setShowMoreInjuries((prev) => !prev)}
+                    >
+                      {showMoreInjuries ? "숨기기 ▲" : "+ 더보기 ▼"}
+                    </button>
+
+                    {/* 추가 부상 부위 */}
+                    <div className={`overflow-hidden transition-all duration-300 ease-in-out ${showMoreInjuries ? "max-h-[500px] opacity-100" : "max-h-0 opacity-0"}`}>
+                      <div className="flex flex-wrap gap-3 pt-2 border-t border-gray-200">
+                        {[
+                          "고관절",
+                          "발가락",
+                          "햄스트링",
+                          "대퇴사두근",
+                          "종아리",
+                          "아킬레스건",
+                          "골반",
+                          "좌골신경통",
+                          "회전근개",
+                          "팔꿈치",
+                          "이두",
+                          "삼두",
+                          "가슴",
+                          "등",
+                          "광배",
+                          "승모",
+                          "복부",
+                          "옆구리",
+                        ].map((injury) => (
+                          <label key={injury} className="inline-flex items-center cursor-pointer">
+                            <input
+                              type="checkbox"
+                              checked={injuries.includes(injury)}
+                              onChange={() => handleInjuryChange(injury)}
+                              className="form-checkbox text-blue-600 rounded"
+                            />
+                            <span className="ml-2 text-gray-700 text-sm">{injury}</span>
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+
               <div className="flex gap-3 pt-4">
                 <button type="button" onClick={handleCloseModal} className="flex-1 px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 transition-colors font-medium">
                   취소

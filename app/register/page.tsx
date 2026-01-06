@@ -8,7 +8,7 @@ import { createMemberApi } from "@/lib/api";
 
 export default function RegisterPage() {
   const router = useRouter();
-  const { isLoggedIn } = useAuthStore();
+  const { getEffectiveAuth, isDevMode } = useAuthStore();
   const addMember = useMemberStore((state) => state.addMember);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
@@ -16,15 +16,19 @@ export default function RegisterPage() {
   const [injuries, setInjuries] = useState<string[]>([]);
   const [showMoreInjuries, setShowMoreInjuries] = useState(false);
 
-  // 로그인 체크
+  // 실제 인증 상태 가져오기 (개발 모드 우회 포함)
+  const { isLoggedIn } = getEffectiveAuth();
+  const devMode = isDevMode();
+
+  // 로그인 체크 (개발 모드에서는 우회)
   useEffect(() => {
-    if (!isLoggedIn) {
+    if (!isLoggedIn && !devMode) {
       router.push("/login");
     }
-  }, [isLoggedIn, router]);
+  }, [isLoggedIn, devMode, router]);
 
-  // 로그인하지 않은 경우 아무것도 렌더링하지 않음
-  if (!isLoggedIn) {
+  // 로그인하지 않은 경우 아무것도 렌더링하지 않음 (개발 모드 제외)
+  if (!isLoggedIn && !devMode) {
     return null;
   }
 
@@ -67,10 +71,15 @@ export default function RegisterPage() {
       // 부상 부위를 notes로 변환 (선택사항)
       const notes = injuries.length > 0 ? injuries.join(", ") : undefined;
 
+      // gender 변환: "male" -> "M", "female" -> "F"
+      const genderCode = gender === "male" ? "M" : "F";
+
       // 백엔드 API 호출하여 DB에 저장
       await createMemberApi({
+        gymId: 1,
         name,
-        gender,
+        gender: genderCode,
+        age: age.toString(),
         height,
         weight,
         notes,
@@ -230,12 +239,18 @@ export default function RegisterPage() {
                 </div>
 
                 {/* 더보기 버튼 */}
-                <button type="button" className="text-blue-600 text-sm font-medium focus:outline-none hover:underline" onClick={() => setShowMoreInjuries((prev) => !prev)}>
-                  {showMoreInjuries ? "숨기기 ▲" : "+ 더보기 ▼"}
-                </button>
+                <div className="transition-all duration-300 ease-in-out">
+                  <button
+                    type="button"
+                    className="text-blue-600 text-sm font-medium focus:outline-none hover:underline transition-all duration-300"
+                    onClick={() => setShowMoreInjuries((prev) => !prev)}
+                  >
+                    {showMoreInjuries ? "숨기기 ▲" : "+ 더보기 ▼"}
+                  </button>
+                </div>
 
                 {/* 추가 부상 부위 */}
-                {showMoreInjuries && (
+                <div className={`overflow-hidden transition-all duration-300 ease-in-out ${showMoreInjuries ? "max-h-[500px] opacity-100" : "max-h-0 opacity-0"}`}>
                   <div className="flex flex-wrap gap-3 pt-2 border-t border-gray-200">
                     {[
                       "고관절",
@@ -263,7 +278,7 @@ export default function RegisterPage() {
                       </label>
                     ))}
                   </div>
-                )}
+                </div>
               </div>
             </div>
 

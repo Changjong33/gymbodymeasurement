@@ -53,8 +53,10 @@ export const signupApi = async (data: SignupRequest): Promise<SignupResponse> =>
 
 // 회원 등록 API
 export interface MemberRequest {
+  gymId: number;
   name: string;
-  gender: "male" | "female";
+  gender: "M" | "F";
+  age: string;
   height: number;
   weight: number;
   notes?: string;
@@ -64,15 +66,29 @@ export interface MemberResponse {
   message?: string;
   member?: {
     id: string;
+    gymId: number;
     name: string;
     gender: string;
+    age: string;
     height: number;
     weight: number;
     notes?: string;
+    createdAt?: string;
   };
 }
 
 export const createMemberApi = async (data: MemberRequest): Promise<MemberResponse> => {
   const response = await axios.post<MemberResponse>(`${API_BASE_URL}/members`, data);
+  return response.data;
+};
+
+// 회원 조회 API
+export interface GetMembersResponse {
+  members?: MemberResponse["member"][];
+  message?: string;
+}
+
+export const getMembersApi = async (): Promise<GetMembersResponse> => {
+  const response = await axios.get<GetMembersResponse>(`${API_BASE_URL}/members`);
   return response.data;
 };

@@ -8,6 +8,7 @@ export interface Member {
   age: number;
   height: number;
   weight: number;
+  notes?: string;
   createdAt: string;
 }
 
@@ -17,6 +18,7 @@ interface MemberState {
   updateMember: (id: string, memberData: Omit<Member, 'id' | 'createdAt'>) => void;
   removeMember: (id: string) => void;
   getMember: (id: string) => Member | undefined;
+  setMembers: (members: Member[]) => void;
 }
 
 export const useMemberStore = create<MemberState>()(
@@ -49,6 +51,9 @@ export const useMemberStore = create<MemberState>()(
       },
       getMember: (id) => {
         return get().members.find((member) => member.id === id);
+      },
+      setMembers: (newMembers) => {
+        set({ members: newMembers });
       },
     }),
     {

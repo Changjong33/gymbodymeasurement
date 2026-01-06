@@ -116,22 +116,26 @@ function ExerciseSection({ section }: { section: ExerciseSection }) {
 
 export default function MeasurementPage() {
   const router = useRouter();
-  const { isLoggedIn } = useAuthStore();
+  const { getEffectiveAuth, isDevMode } = useAuthStore();
   const { members } = useMemberStore();
   const addMeasurement = useMeasurementStore((state) => state.addMeasurement);
   const [selectedMemberId, setSelectedMemberId] = useState<string>("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
 
-  // 로그인 체크
+  // 실제 인증 상태 가져오기 (개발 모드 우회 포함)
+  const { isLoggedIn } = getEffectiveAuth();
+  const devMode = isDevMode();
+
+  // 로그인 체크 (개발 모드에서는 우회)
   useEffect(() => {
-    if (!isLoggedIn) {
+    if (!isLoggedIn && !devMode) {
       router.push("/login");
     }
-  }, [isLoggedIn, router]);
+  }, [isLoggedIn, devMode, router]);
 
-  // 로그인하지 않은 경우 아무것도 렌더링하지 않음
-  if (!isLoggedIn) {
+  // 로그인하지 않은 경우 아무것도 렌더링하지 않음 (개발 모드 제외)
+  if (!isLoggedIn && !devMode) {
     return null;
   }
 

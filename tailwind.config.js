@@ -4,8 +4,8 @@ module.exports = {
   theme: {
     extend: {
       fontFamily: {
-        // Healthset Gothic only
-        sans: ["Healthset Gothic"],
+        // High1 Daylily only
+        sans: ["High1Daylily"],
       },
     },
   },

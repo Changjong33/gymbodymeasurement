@@ -455,7 +455,7 @@ interface ExerciseSection {
   title: string;
   prefix: string;
   kgField: string;
-  fieldType?: "kg" | "reps"; // 필드 타입: 무게 또는 횟수
+  fieldType?: "kg" | "reps" | "flexibility"; // 필드 타입: 무게, 횟수, 또는 유연성
   options: { name: string; label: string }[];
   category: ExerciseType;
 }
@@ -536,36 +536,98 @@ const exerciseSections: ExerciseSection[] = [
       { name: "situpBodyShake", label: "상체 흔들림" },
     ],
   },
+  {
+    title: "[상체] 흉추 가동성 테스트",
+    prefix: "thoracic",
+    kgField: "thoracicMobility",
+    fieldType: "flexibility",
+    category: "flexibility",
+    options: [],
+  },
+  {
+    title: "[상체] 어깨 유연성 테스트 (굽힘/폄/외전/내전/외회전/내회전)",
+    prefix: "shoulderFlexibility",
+    kgField: "shoulderFlexibility",
+    fieldType: "flexibility",
+    category: "flexibility",
+    options: [],
+  },
+  {
+    title: "[하체] 햄스트링",
+    prefix: "hamstring",
+    kgField: "hamstring",
+    fieldType: "flexibility",
+    category: "flexibility",
+    options: [],
+  },
+  {
+    title: "[하체] 고관절 테스트 (굴곡/신전/스쿼트각도)",
+    prefix: "hip",
+    kgField: "hipMobility",
+    fieldType: "flexibility",
+    category: "flexibility",
+    options: [],
+  },
+  {
+    title: "[하체] 발목 가동성",
+    prefix: "ankle",
+    kgField: "ankleMobility",
+    fieldType: "flexibility",
+    category: "flexibility",
+    options: [],
+  },
 ];
 
 // 운동 섹션 컴포넌트
 function ExerciseSection({ section }: { section: ExerciseSection }) {
   const fieldType = section.fieldType || "kg";
-  const fieldLabel = fieldType === "reps" ? "횟수 (회)" : "무게 (kg)";
-  const placeholder = fieldType === "reps" ? "횟수" : "무게";
+  const fieldLabel = fieldType === "reps" ? "횟수 (회)" : fieldType === "flexibility" ? "평가" : "무게 (kg)";
+  const placeholder = fieldType === "reps" ? "횟수" : fieldType === "flexibility" ? "" : "무게";
 
   return (
     <div className="mb-6">
       <h3 className="text-xl font-bold text-gray-800 mb-2">{section.title}</h3>
-      <div className="max-w-xs">
-        <div>
-          <label className="block font-medium mb-1 text-gray-700" htmlFor={section.kgField}>
-            {fieldLabel}
-          </label>
-          <input id={section.kgField} name={section.kgField} type="number" min="0" className="w-full border border-gray-300 rounded-md px-3 py-2" placeholder={placeholder} />
-        </div>
-      </div>
-      <div className="mt-4">
-        <div className="text-red-500 font-medium mb-2">선택사항</div>
-        <div className="flex flex-col gap-1">
-          {section.options.map((option) => (
-            <label key={option.name} className="inline-flex items-center">
-              <input type="checkbox" name={option.name} className="form-checkbox text-green-600" />
-              <span className="ml-2">{option.label}</span>
+      {fieldType === "flexibility" ? (
+        <div className="mt-4">
+          <div className="font-medium mb-3 text-gray-700">평가 선택</div>
+          <div className="flex flex-col gap-2">
+            <label className="inline-flex items-center">
+              <input type="radio" name={section.kgField} value="good" className="form-radio text-green-600" />
+              <span className="ml-2">좋음</span>
             </label>
-          ))}
+            <label className="inline-flex items-center">
+              <input type="radio" name={section.kgField} value="normal" className="form-radio text-green-600" />
+              <span className="ml-2">보통</span>
+            </label>
+            <label className="inline-flex items-center">
+              <input type="radio" name={section.kgField} value="low" className="form-radio text-green-600" />
+              <span className="ml-2">낮음</span>
+            </label>
+          </div>
         </div>
-      </div>
+      ) : (
+        <>
+          <div className="max-w-xs">
+            <div>
+              <label className="block font-medium mb-1 text-gray-700" htmlFor={section.kgField}>
+                {fieldLabel}
+              </label>
+              <input id={section.kgField} name={section.kgField} type="number" min="0" className="w-full border border-gray-300 rounded-md px-3 py-2" placeholder={placeholder} />
+            </div>
+          </div>
+          <div className="mt-4">
+            <div className="text-red-500 font-medium mb-2">선택사항</div>
+            <div className="flex flex-col gap-1">
+              {section.options.map((option) => (
+                <label key={option.name} className="inline-flex items-center">
+                  <input type="checkbox" name={option.name} className="form-checkbox text-green-600" />
+                  <span className="ml-2">{option.label}</span>
+                </label>
+              ))}
+            </div>
+          </div>
+        </>
+      )}
     </div>
   );
 }
@@ -694,6 +756,12 @@ export default function MeasurementPage() {
       situpBounce: getCheckbox(formData, "situpBounce"),
       situpCoreTension: getCheckbox(formData, "situpCoreTension"),
       situpBodyShake: getCheckbox(formData, "situpBodyShake"),
+      // 유연성 데이터
+      thoracicMobility: formData.get("thoracicMobility") as string | null,
+      shoulderFlexibility: formData.get("shoulderFlexibility") as string | null,
+      hamstring: formData.get("hamstring") as string | null,
+      hipMobility: formData.get("hipMobility") as string | null,
+      ankleMobility: formData.get("ankleMobility") as string | null,
     };
 
     try {
@@ -852,6 +920,19 @@ export default function MeasurementPage() {
               {selectedMemberId && (
                 <div className="mb-8">
                   <h2 className="text-2xl font-semibold text-gray-700 mb-4">측정할 운동 선택 (복수 선택 가능)</h2>
+                  {/* 선택된 운동 타입에 따라 검사할 구체적인 운동 표시 */}
+                  {selectedExerciseTypes.length > 0 && filteredExerciseSections.length > 0 && (
+                    <div className="mb-4 p-4 bg-green-50 border border-green-200 rounded-md">
+                      <p className="text-sm font-semibold text-gray-700 mb-2">검사할 운동:</p>
+                      <div className="flex flex-wrap gap-2">
+                        {filteredExerciseSections.map((section) => (
+                          <span key={section.prefix} className="px-3 py-1 bg-green-100 text-green-800 rounded-full text-sm font-medium">
+                            {section.title}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <button
                       type="button"

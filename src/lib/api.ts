@@ -247,3 +247,65 @@ export const deleteMemberApi = async (id: string | number): Promise<DeleteMember
     throw error;
   }
 };
+
+// 측정 계산 API
+export interface MeasurementItem {
+  categoryId: number;
+  value: number;
+}
+
+export interface CalculateMeasurementsRequest {
+  memberId: number;
+  measurements: MeasurementItem[];
+}
+
+export interface MeasurementResult {
+  categoryId: number;
+  exerciseName: string;
+  value: number;
+  unit: string;
+  level: string;
+  score: number;
+  nextLevel: string;
+  nextLevelTarget: number;
+  remaining: number;
+}
+
+export interface TotalSummary {
+  overallLevel: string;
+  averageScore: number;
+  description: string;
+}
+
+export interface CalculateMeasurementsResponse {
+  statusCode: number;
+  data: {
+    totalSummary: TotalSummary;
+    results: MeasurementResult[];
+  };
+  timestamp: string;
+}
+
+export const calculateMeasurementsApi = async (data: CalculateMeasurementsRequest): Promise<CalculateMeasurementsResponse> => {
+  try {
+    devLog("=== 측정 계산 API 호출 시작 ===");
+    devLog("URL:", "/members/calculate-measurements");
+    devLog("Request Body:", data);
+
+    const response = await api.post<CalculateMeasurementsResponse>("/members/calculate-measurements", data, {
+      headers: {
+        "Content-Type": "application/json",
+      },
+    });
+
+    devLog("=== 측정 계산 API 호출 성공 ===");
+    devLog("Response:", response.data);
+    return response.data;
+  } catch (error: any) {
+    devError("=== 측정 계산 API 호출 실패 ===");
+    devError("Error:", error);
+    devError("Error Response Data:", error.response?.data);
+    devError("Error Response Status:", error.response?.status);
+    throw error;
+  }
+};

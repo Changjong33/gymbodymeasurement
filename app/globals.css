@@ -1,3 +1,50 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+@font-face {
+  font-family: "Healthset Gothic";
+  src: url("/fonts/HealthsetGothic-Light.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@layer base {
+  html {
+    font-family: "Healthset Gothic";
+    font-weight: 400;
+  }
+
+  body {
+    font-family: "Healthset Gothic";
+    font-weight: 400;
+  }
+
+  /* Do not use fake bold weights: force all to Regular(400) */
+  :where(h1,h2,h3,h4,h5,h6,button,strong,b,em) {
+    font-weight: 400;
+  }
+
+  /* Tailwind font-weight utilities can trigger synthesized bold; neutralize them */
+  :where(.font-thin,.font-extralight,.font-light,.font-normal,.font-medium,.font-semibold,.font-bold,.font-extrabold,.font-black) {
+    font-weight: 400 !important;
+  }
+
+  /* Emphasis by font-size (not weight) */
+  strong,
+  b,
+  em {
+    font-size: 1.05em;
+  }
+
+  /* Headings emphasize by size (keep weight 300) */
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    line-height: 1.2;
+  }
+}

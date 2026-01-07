@@ -15,7 +15,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="ko">
-      <body className="bg-gradient-to-br from-gray-50 to-gray-100">
+      <body className="font-sans bg-gradient-to-br from-gray-50 to-gray-100">
         <Header />
         <div className="flex min-h-[calc(100vh-80px)]">
           <Sidebar />

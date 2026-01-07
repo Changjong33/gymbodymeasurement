@@ -31,6 +31,7 @@ interface ExerciseEvaluation {
   name: string;
   emoji: string;
   weightKg: number;
+  unit?: string; // API 응답의 unit (kg 또는 reps)
   ratio: number;
   ratioText: string;
   levelText: string;
@@ -86,7 +87,7 @@ function generateEvaluationFromApiResponse(member: any, apiResponse: CalculateMe
   // 운동별 매핑 정보
   const exerciseMap: { [key: number]: { name: string; emoji: string; key: string; issues: string[] } } = {
     1: { name: "가슴 – 벤치프레스", emoji: "💪", key: "bench", issues: [] },
-    2: { name: "등 – 풀업", emoji: "🧲", key: "lat", issues: [] },
+    2: { name: "등 – 풀업", emoji: "🧲", key: "pullup", issues: [] },
     3: { name: "어깨 – 숄더프레스", emoji: "🏋️", key: "shoulder", issues: [] },
     4: { name: "하체 – 바벨 스쿼트", emoji: "🦵", key: "squat", issues: [] },
     5: { name: "코어 – 윗몸일으키기", emoji: "💪", key: "situp", issues: [] },
@@ -107,11 +108,11 @@ function generateEvaluationFromApiResponse(member: any, apiResponse: CalculateMe
       if (measurementData.benchRangeLimit) issues.push("가동 범위 제한");
       if (measurementData.benchScapula) issues.push("견갑 고정 어려움");
     } else if (result.categoryId === 2) {
-      // 풀업 (랫풀다운)
-      if (measurementData.latArms) issues.push("팔 위주 사용 → 광배 개입 부족");
-      if (measurementData.latLatsFeel) issues.push("광배 자극 인지 어려움");
-      if (measurementData.latBounce) issues.push("반동 사용");
-      if (measurementData.latScapula) issues.push("견갑 조절 어려움");
+      // 풀업
+      if (measurementData.pullupArms) issues.push("팔 위주 사용 → 광배 개입 부족");
+      if (measurementData.pullupLatsFeel) issues.push("광배 자극 인지 어려움");
+      if (measurementData.pullupBounce) issues.push("반동 사용");
+      if (measurementData.pullupScapula) issues.push("견갑 조절 어려움");
     } else if (result.categoryId === 3) {
       // 숄더프레스
       if (measurementData.shoulderPain) issues.push("어깨 통증");
@@ -148,7 +149,7 @@ function generateEvaluationFromApiResponse(member: any, apiResponse: CalculateMe
         evaluation += `가동범위 제한으로 실제 활용 가능한 근력은 낮아져 있는 상태입니다.`;
       } else if (result.categoryId === 1 && measurementData.benchImbalance) {
         evaluation += `좌우 밸런스 불균형으로 중량 상승에 제약이 있습니다.`;
-      } else if (result.categoryId === 2 && measurementData.latArms) {
+      } else if (result.categoryId === 2 && measurementData.pullupArms) {
         evaluation += `등 근육이 아닌 팔에 힘이 집중되는 패턴이 나타납니다.`;
       } else {
         evaluation += `${issues[0]} 등의 문제가 관찰됩니다.`;
@@ -161,6 +162,7 @@ function generateEvaluationFromApiResponse(member: any, apiResponse: CalculateMe
       name: exerciseInfo.name,
       emoji: exerciseInfo.emoji,
       weightKg: result.value,
+      unit: result.unit,
       ratio,
       ratioText,
       levelText: levelName,
@@ -219,10 +221,10 @@ function generateEvaluation(member: any, measurementData: any): EvaluationResult
     totalStrength += measurementData.benchKg / weight;
     exerciseCount++;
   }
-  if (measurementData.latKg) {
-    totalStrength += measurementData.latKg / weight;
-    exerciseCount++;
-  }
+  // if (measurementData.latKg) {
+  //   totalStrength += measurementData.latKg / weight;
+  //   exerciseCount++;
+  // }
   if (measurementData.shoulderKg) {
     totalStrength += measurementData.shoulderKg / weight;
     exerciseCount++;
@@ -339,48 +341,48 @@ function generateEvaluation(member: any, measurementData: any): EvaluationResult
     allIssues.push(...issues.map((issue) => `가슴: ${issue}`));
   }
 
-  // 등 - 랫풀다운
-  if (measurementData.latKg) {
-    const ratio = measurementData.latKg / weight;
-    const ratioText = ratio.toFixed(2);
-    let levelText = "";
-    if (ratio >= 1.0) levelText = "평균 이상";
-    else if (ratio >= 0.8) levelText = "수치 자체는 정상";
-    else levelText = "평균 이하";
+  // // 등 - 랫풀다운
+  // if (measurementData.latKg) {
+  //   const ratio = measurementData.latKg / weight;
+  //   const ratioText = ratio.toFixed(2);
+  //   let levelText = "";
+  //   if (ratio >= 1.0) levelText = "평균 이상";
+  //   else if (ratio >= 0.8) levelText = "수치 자체는 정상";
+  //   else levelText = "평균 이하";
 
-    const issues: string[] = [];
-    if (measurementData.latArms) {
-      issues.push("팔 위주 사용 → 광배 개입 부족");
-    }
-    if (measurementData.latLatsFeel) issues.push("광배 자극 인지 어려움");
-    if (measurementData.latBounce) issues.push("반동 사용");
-    if (measurementData.latScapula) issues.push("견갑 조절 어려움");
+  //   const issues: string[] = [];
+  //   if (measurementData.latArms) {
+  //     issues.push("팔 위주 사용 → 광배 개입 부족");
+  //   }
+  //   if (measurementData.latLatsFeel) issues.push("광배 자극 인지 어려움");
+  //   if (measurementData.latBounce) issues.push("반동 사용");
+  //   if (measurementData.latScapula) issues.push("견갑 조절 어려움");
 
-    let evaluation = "";
-    if (measurementData.latArms) {
-      evaluation = `등 근력 수치는 나쁘지 않으나,\n등 근육이 아닌 팔에 힘이 집중되는 패턴이 나타납니다.`;
-    } else {
-      evaluation = `등 근력은 ${levelText} 수준으로 평가됩니다.`;
-    }
+  //   let evaluation = "";
+  //   if (measurementData.latArms) {
+  //     evaluation = `등 근력 수치는 나쁘지 않으나,\n등 근육이 아닌 팔에 힘이 집중되는 패턴이 나타납니다.`;
+  //   } else {
+  //     evaluation = `등 근력은 ${levelText} 수준으로 평가됩니다.`;
+  //   }
 
-    exerciseEvaluations.push({
-      name: "등 – 랫풀다운",
-      emoji: "🧲",
-      weightKg: measurementData.latKg,
-      ratio,
-      ratioText,
-      levelText,
-      level: "",
-      score: 0,
-      nextLevel: "",
-      nextLevelTarget: 0,
-      remaining: 0,
-      issues,
-      evaluation,
-    });
+  //   exerciseEvaluations.push({
+  //     name: "등 – 랫풀다운",
+  //     emoji: "🧲",
+  //     weightKg: measurementData.latKg,
+  //     ratio,
+  //     ratioText,
+  //     levelText,
+  //     level: "",
+  //     score: 0,
+  //     nextLevel: "",
+  //     nextLevelTarget: 0,
+  //     remaining: 0,
+  //     issues,
+  //     evaluation,
+  //   });
 
-    allIssues.push(...issues.map((issue) => `등: ${issue}`));
-  }
+  //   allIssues.push(...issues.map((issue) => `등: ${issue}`));
+  // }
 
   // 어깨 - 숄더프레스
   if (measurementData.shoulderKg) {
@@ -484,18 +486,18 @@ const exerciseSections: ExerciseSection[] = [
       { name: "benchScapula", label: "견갑 고정 어려움" },
     ],
   },
-  {
-    title: "[등] 랫풀다운",
-    prefix: "lat",
-    kgField: "latKg",
-    category: "weight",
-    options: [
-      { name: "latArms", label: "팔 위주로 당겨짐" },
-      { name: "latLatsFeel", label: "광배 자극 인지 어려움" },
-      { name: "latBounce", label: "반동 사용" },
-      { name: "latScapula", label: "견갑 조절 어려움" },
-    ],
-  },
+  // {
+  //   title: "[등] 랫풀다운",
+  //   prefix: "lat",
+  //   kgField: "latKg",
+  //   category: "weight",
+  //   options: [
+  //     { name: "latArms", label: "팔 위주로 당겨짐" },
+  //     { name: "latLatsFeel", label: "광배 자극 인지 어려움" },
+  //     { name: "latBounce", label: "반동 사용" },
+  //     { name: "latScapula", label: "견갑 조절 어려움" },
+  //   ],
+  // },
   {
     title: "[어깨] 숄더프레스",
     prefix: "shoulder",
@@ -506,6 +508,19 @@ const exerciseSections: ExerciseSection[] = [
       { name: "shoulderPain", label: "어깨 통증" },
       { name: "shoulderRange", label: "가동 범위 제한" },
       { name: "shoulderCore", label: "코어 불안정" },
+    ],
+  },
+  {
+    title: "[등] 풀업",
+    prefix: "pullup",
+    kgField: "pullupReps",
+    fieldType: "reps",
+    category: "bodyweight",
+    options: [
+      { name: "pullupArms", label: "팔 위주로 당겨짐" },
+      { name: "pullupLatsFeel", label: "광배 자극 인지 어려움" },
+      { name: "pullupBounce", label: "반동 사용" },
+      { name: "pullupScapula", label: "견갑 조절 어려움" },
     ],
   },
   {
@@ -659,16 +674,21 @@ export default function MeasurementPage() {
       benchRangeLimit: getCheckbox(formData, "benchRangeLimit"),
       benchImbalance: getCheckbox(formData, "benchImbalance"),
       benchScapula: getCheckbox(formData, "benchScapula"),
-      latKg: getNumber(formData, "latKg"),
-      latArms: getCheckbox(formData, "latArms"),
-      latLatsFeel: getCheckbox(formData, "latLatsFeel"),
-      latBounce: getCheckbox(formData, "latBounce"),
-      latScapula: getCheckbox(formData, "latScapula"),
+      // latKg: getNumber(formData, "latKg"),
+      // latArms: getCheckbox(formData, "latArms"),
+      // latLatsFeel: getCheckbox(formData, "latLatsFeel"),
+      // latBounce: getCheckbox(formData, "latBounce"),
+      // latScapula: getCheckbox(formData, "latScapula"),
       shoulderKg: getNumber(formData, "shoulderKg"),
       shoulderOverextend: getCheckbox(formData, "shoulderOverextend"),
       shoulderPain: getCheckbox(formData, "shoulderPain"),
       shoulderRange: getCheckbox(formData, "shoulderRange"),
       shoulderCore: getCheckbox(formData, "shoulderCore"),
+      pullupReps: getNumber(formData, "pullupReps", true),
+      pullupArms: getCheckbox(formData, "pullupArms"),
+      pullupLatsFeel: getCheckbox(formData, "pullupLatsFeel"),
+      pullupBounce: getCheckbox(formData, "pullupBounce"),
+      pullupScapula: getCheckbox(formData, "pullupScapula"),
       situpReps: getNumber(formData, "situpReps", true),
       situpLowerBack: getCheckbox(formData, "situpLowerBack"),
       situpBounce: getCheckbox(formData, "situpBounce"),
@@ -684,8 +704,8 @@ export default function MeasurementPage() {
       if (measurementData.benchKg) {
         measurements.push({ categoryId: 1, value: measurementData.benchKg });
       }
-      if (measurementData.latKg) {
-        measurements.push({ categoryId: 2, value: measurementData.latKg });
+      if (measurementData.pullupReps) {
+        measurements.push({ categoryId: 2, value: measurementData.pullupReps });
       }
       if (measurementData.shoulderKg) {
         measurements.push({ categoryId: 3, value: measurementData.shoulderKg });
@@ -951,7 +971,8 @@ export default function MeasurementPage() {
                   <div className="flex items-center gap-2 mb-3">
                     <span className="text-2xl">{exerciseEval.emoji}</span>
                     <h3 className="font-semibold text-lg text-gray-800">
-                      {exerciseEval.name} (1RM {exerciseEval.weightKg}kg)
+                      {exerciseEval.name} ({exerciseEval.unit === "reps" ? "횟수" : "1RM"} {exerciseEval.weightKg}
+                      {exerciseEval.unit === "reps" ? "회" : "kg"})
                     </h3>
                   </div>
                   <div className="mb-3">
@@ -974,11 +995,13 @@ export default function MeasurementPage() {
                         </div>
                       )}
                     </div>
-                    <div className="text-sm text-gray-600 mb-2">
-                      <div>
-                        <span className="font-medium">체중 대비 비율:</span> {exerciseEval.ratioText}배
+                    {exerciseEval.unit !== "reps" && (
+                      <div className="text-sm text-gray-600 mb-2">
+                        <div>
+                          <span className="font-medium">체중 대비 비율:</span> {exerciseEval.ratioText}배
+                        </div>
                       </div>
-                    </div>
+                    )}
                     {exerciseEval.issues.length > 0 && (
                       <div className="mt-2">
                         <div className="text-sm font-medium text-red-600 mb-1">문제점:</div>

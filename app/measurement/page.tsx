@@ -50,6 +50,15 @@ export default function MeasurementPage() {
 
   const selectedMember = members.find((m) => m.id === selectedMemberId);
 
+  // 버튼 내부(노란 목록)용: 전체 운동 섹션(선택 여부와 무관)
+  const allExerciseSections = useMemo(() => {
+    const all: Array<{ section: BaseSection }> = [];
+    weightTrainingSections.forEach((section) => all.push({ section }));
+    bodyweightSections.forEach((section) => all.push({ section }));
+    flexibilitySections.forEach((section) => all.push({ section }));
+    return all;
+  }, []);
+
   // 선택한 운동 타입에 맞는 운동 섹션 필터링
   const filteredExerciseSections = useMemo(() => {
     if (selectedExerciseTypes.length === 0) return [];
@@ -76,6 +85,19 @@ export default function MeasurementPage() {
 
     return allSections;
   }, [selectedExerciseTypes]);
+
+  // 카테고리별로 섹션 그룹화 (렌더링 시 상단에 카테고리 제목 표시용)
+  const groupedExerciseSections = useMemo(() => {
+    const groups: Record<ExerciseType, Array<{ section: BaseSection; component: React.ComponentType<any> }>> = {
+      weight: [],
+      bodyweight: [],
+      flexibility: [],
+    };
+    filteredExerciseSections.forEach(({ section, category, component }) => {
+      groups[category].push({ section, component });
+    });
+    return groups;
+  }, [filteredExerciseSections]);
 
   // 다음 버튼 활성화 조건
   const canProceed = selectedMemberId && selectedExerciseTypes.length > 0;
@@ -197,7 +219,7 @@ export default function MeasurementPage() {
               {selectedMemberId && (
                 <div className="mb-8">
                   <h2 className="text-2xl font-semibold text-gray-700 mb-4">측정할 운동 선택 (복수 선택 가능)</h2>
-                  <ExerciseTypeSelector selectedExerciseTypes={selectedExerciseTypes} onToggleExerciseType={toggleExerciseType} filteredExerciseSections={filteredExerciseSections} />
+                  <ExerciseTypeSelector selectedExerciseTypes={selectedExerciseTypes} onToggleExerciseType={toggleExerciseType} allExerciseSections={allExerciseSections} />
                 </div>
               )}
 
@@ -213,41 +235,106 @@ export default function MeasurementPage() {
             </>
           ) : (
             <>
-              {/* 측정 폼 */}
-              <div className="mb-6">
-                <button type="button" onClick={handleBack} className="text-blue-600 hover:text-blue-800 font-medium mb-4 flex items-center gap-2">
-                  ← 뒤로가기
+              {/* 측정 폼 헤더 */}
+              <div className="mb-8">
+                <button type="button" onClick={handleBack} className="text-blue-600 hover:text-blue-800 font-medium mb-6 flex items-center gap-2 transition-colors">
+                  <span className="text-xl">←</span>
+                  <span>뒤로가기</span>
                 </button>
-                <div className="p-4 bg-blue-50 border border-blue-200 rounded-md mb-4">
-                  <p className="text-sm text-gray-700">
-                    <span className="font-semibold">회원:</span> {selectedMember?.name} | <span className="font-semibold">운동:</span>{" "}
-                    {selectedExerciseTypes.map((type) => (type === "flexibility" ? "유연성" : type === "bodyweight" ? "맨몸운동" : "웨이트 트레이닝")).join(", ")}
-                  </p>
+
+                {/* 회원 및 운동 정보 카드 */}
+                <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border-2 border-blue-200 rounded-xl p-6 mb-6 shadow-sm">
+                  <div className="flex items-center gap-4 mb-3">
+                    <div className="flex items-center gap-2">
+                      <span className="text-2xl">👤</span>
+                      <div>
+                        <div className="text-xs text-gray-500 mb-1">측정 회원</div>
+                        <div className="text-lg font-semibold text-gray-800">{selectedMember?.name}</div>
+                      </div>
+                    </div>
+                    <div className="h-12 w-px bg-blue-300"></div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-2xl">🏋️</span>
+                      <div>
+                        <div className="text-xs text-gray-500 mb-1">선택된 운동</div>
+                        <div className="text-lg font-semibold text-gray-800">
+                          {selectedExerciseTypes.map((type) => (type === "flexibility" ? "유연성" : type === "bodyweight" ? "맨몸운동" : "웨이트 트레이닝")).join(", ")}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="text-sm text-gray-600 mt-2">
+                    총 <span className="font-semibold text-blue-700">{filteredExerciseSections.length}개</span>의 측정 항목을 입력해주세요
+                  </div>
                 </div>
               </div>
 
-              <form className="space-y-8" onSubmit={handleSubmit}>
+              <form className="space-y-6" onSubmit={handleSubmit}>
                 {/* 선택한 운동 타입에 맞는 운동 섹션들 */}
                 {filteredExerciseSections.length > 0 ? (
                   <>
-                    <div className="mb-4 text-lg font-semibold text-gray-700">측정할 운동 ({filteredExerciseSections.length}개)</div>
-                    {filteredExerciseSections.map(({ section, component: Component }, index) => (
-                      <div key={`${section.category}-${section.prefix}-${index}`} className="border-b border-gray-200 pb-6">
-                        <Component section={section} />
-                      </div>
-                    ))}
+                    {(["weight", "bodyweight", "flexibility"] as ExerciseType[]).map((cat) => {
+                      const items = groupedExerciseSections[cat];
+                      if (!items || items.length === 0) return null;
+                      const title = cat === "weight" ? "웨이트 트레이닝" : cat === "bodyweight" ? "맨몸운동" : "유연성";
+                      const emoji = cat === "weight" ? "🏋️" : cat === "bodyweight" ? "💪" : "🧘";
+                      const bgColor =
+                        cat === "weight"
+                          ? "from-purple-50 to-pink-50 border-purple-200"
+                          : cat === "bodyweight"
+                          ? "from-orange-50 to-amber-50 border-orange-200"
+                          : "from-green-50 to-emerald-50 border-green-200";
+                      const textColor = cat === "weight" ? "text-purple-700" : cat === "bodyweight" ? "text-orange-700" : "text-green-700";
+
+                      return (
+                        <div key={cat} className="bg-white border-2 border-gray-200 rounded-xl p-6 shadow-sm mb-6">
+                          <div className={`bg-gradient-to-r ${bgColor} rounded-lg p-4 mb-4`}>
+                            <div className="flex items-center gap-3 mb-2">
+                              <span className="text-3xl">{emoji}</span>
+                              <div>
+                                <h3 className={`text-xl font-semibold ${textColor}`}>{title}</h3>
+                                <p className="text-sm text-gray-600 mt-1">{items.length}개의 측정 항목</p>
+                              </div>
+                            </div>
+                          </div>
+                          <div className="space-y-6">
+                            {items.map(({ section, component: Component }, index) => (
+                              <div key={`${section.category}-${section.prefix}-${index}`} className="bg-white border border-gray-200 rounded-lg p-5 shadow-sm hover:shadow-md transition-shadow">
+                                <Component section={section} />
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      );
+                    })}
                   </>
                 ) : (
-                  <div className="text-center py-8 text-gray-500">선택한 운동 타입에 대한 측정 항목이 없습니다.</div>
+                  <div className="text-center py-12 text-gray-500 bg-gray-50 rounded-lg border border-gray-200">
+                    <span className="text-4xl mb-3 block">📝</span>
+                    <p>선택한 운동 타입에 대한 측정 항목이 없습니다.</p>
+                  </div>
                 )}
 
-                <button
-                  type="submit"
-                  disabled={isSubmitting || !selectedMemberId}
-                  className="w-full bg-gradient-to-r from-gray-400 to-gray-600 text-white text-lg font-semibold rounded-md py-2 hover:from-gray-600 hover:to-gray-800 transition disabled:bg-gray-100 disabled:cursor-not-allowed"
-                >
-                  {isSubmitting ? "저장 중..." : "측정 완료"}
-                </button>
+                {/* 제출 버튼 */}
+                <div className="sticky bottom-0 bg-white pt-6 pb-2 -mx-8 px-8 border-t border-gray-200 mt-8">
+                  <button
+                    type="submit"
+                    disabled={isSubmitting || !selectedMemberId}
+                    className="w-full bg-gradient-to-r from-green-500 to-emerald-600 text-white text-lg font-semibold rounded-lg py-4 hover:from-green-600 hover:to-emerald-700 transition-all shadow-lg hover:shadow-xl disabled:bg-gray-300 disabled:cursor-not-allowed disabled:hover:from-gray-300 disabled:hover:to-gray-300 disabled:shadow-none"
+                  >
+                    {isSubmitting ? (
+                      <span className="flex items-center justify-center gap-2">
+                        <span className="animate-spin">⏳</span>
+                        <span>저장 중...</span>
+                      </span>
+                    ) : (
+                      <span className="flex items-center justify-center gap-2">
+                        <span>✅</span>
+                        <span>측정 완료</span>
+                      </span>
+                    )}
+                  </button>
+                </div>
               </form>
             </>
           )}

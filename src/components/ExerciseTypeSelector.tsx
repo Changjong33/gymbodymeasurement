@@ -5,18 +5,11 @@ type ExerciseType = "flexibility" | "bodyweight" | "weight";
 interface ExerciseTypeSelectorProps {
   selectedExerciseTypes: ExerciseType[];
   onToggleExerciseType: (type: ExerciseType) => void;
-  filteredExerciseSections: Array<{ section: BaseSection }>;
+  allExerciseSections: Array<{ section: BaseSection }>;
 }
 
-export default function ExerciseTypeSelector({
-  selectedExerciseTypes,
-  onToggleExerciseType,
-  filteredExerciseSections,
-}: ExerciseTypeSelectorProps) {
-  const sectionsByType = (type: ExerciseType) =>
-    filteredExerciseSections
-      .filter(({ section }) => section.category === type)
-      .map(({ section }) => section.title);
+export default function ExerciseTypeSelector({ selectedExerciseTypes, onToggleExerciseType, allExerciseSections }: ExerciseTypeSelectorProps) {
+  const sectionsByType = (type: ExerciseType) => allExerciseSections.filter(({ section }) => section.category === type).map(({ section }) => section.title);
 
   const renderExpandableList = (type: ExerciseType) => {
     const isOpen = selectedExerciseTypes.includes(type);
@@ -35,18 +28,18 @@ export default function ExerciseTypeSelector({
       >
         <div className="min-h-0">
           <div className="w-full rounded-lg bg-yellow-100 border border-yellow-200 px-3 py-2 text-left">
-          {titles.length > 0 ? (
-            <ul className="text-sm text-yellow-900 space-y-1">
-              {titles.map((title, idx) => (
-                <li key={`${type}-${idx}`} className="leading-snug">
-                  - {title}
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <div className="text-sm text-yellow-900">해당 타입의 측정 항목이 없습니다.</div>
-          )}
-        </div>
+            {titles.length > 0 ? (
+              <ul className="text-sm text-yellow-900 space-y-1">
+                {titles.map((title, idx) => (
+                  <li key={`${type}-${idx}`} className="leading-snug">
+                    - {title}
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <div className="text-sm text-yellow-900">해당 타입의 측정 항목이 없습니다.</div>
+            )}
+          </div>
         </div>
       </div>
     );
@@ -60,9 +53,7 @@ export default function ExerciseTypeSelector({
           type="button"
           onClick={() => onToggleExerciseType("flexibility")}
           className={`p-6 border-2 rounded-lg text-center transition-all flex flex-col items-center self-start ${
-            selectedExerciseTypes.includes("flexibility")
-              ? "border-green-500 bg-green-50 shadow-md"
-              : "border-gray-200 hover:border-gray-300 hover:shadow-sm"
+            selectedExerciseTypes.includes("flexibility") ? "border-green-500 bg-green-50 shadow-md" : "border-gray-200 hover:border-gray-300 hover:shadow-sm"
           }`}
         >
           <div className="text-4xl mb-2">🧘</div>
@@ -73,9 +64,7 @@ export default function ExerciseTypeSelector({
           type="button"
           onClick={() => onToggleExerciseType("bodyweight")}
           className={`p-6 border-2 rounded-lg text-center transition-all flex flex-col items-center self-start ${
-            selectedExerciseTypes.includes("bodyweight")
-              ? "border-green-500 bg-green-50 shadow-md"
-              : "border-gray-200 hover:border-gray-300 hover:shadow-sm"
+            selectedExerciseTypes.includes("bodyweight") ? "border-green-500 bg-green-50 shadow-md" : "border-gray-200 hover:border-gray-300 hover:shadow-sm"
           }`}
         >
           <div className="text-4xl mb-2">💪</div>
@@ -86,9 +75,7 @@ export default function ExerciseTypeSelector({
           type="button"
           onClick={() => onToggleExerciseType("weight")}
           className={`p-6 border-2 rounded-lg text-center transition-all flex flex-col items-center self-start ${
-            selectedExerciseTypes.includes("weight")
-              ? "border-green-500 bg-green-50 shadow-md"
-              : "border-gray-200 hover:border-gray-300 hover:shadow-sm"
+            selectedExerciseTypes.includes("weight") ? "border-green-500 bg-green-50 shadow-md" : "border-gray-200 hover:border-gray-300 hover:shadow-sm"
           }`}
         >
           <div className="text-4xl mb-2">🏋️</div>
@@ -96,23 +83,6 @@ export default function ExerciseTypeSelector({
           {renderExpandableList("weight")}
         </button>
       </div>
-
-      {/* 선택된 운동 표시 */}
-      {selectedExerciseTypes.length > 0 && (
-        <div className="mt-4 text-sm text-gray-600">
-          선택된 운동:{" "}
-          {selectedExerciseTypes
-            .map((type) =>
-              type === "flexibility"
-                ? "유연성"
-                : type === "bodyweight"
-                ? "맨몸운동"
-                : "웨이트 트레이닝"
-            )
-            .join(", ")}
-        </div>
-      )}
     </>
   );
 }
-

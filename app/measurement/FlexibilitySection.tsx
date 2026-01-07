@@ -51,10 +51,10 @@ export const flexibilitySections: FlexibilitySection[] = [
 // 유연성 섹션 컴포넌트
 export default function FlexibilitySection({ section }: { section: FlexibilitySection }) {
   return (
-    <div className="mb-6">
+    <div>
       <h3 className="text-xl font-bold text-gray-800 mb-2">{section.title}</h3>
       <div className="mt-4">
-        <div className="flex flex-col gap-2">
+        <div className="flex gap-6">
           <label className="inline-flex items-center">
             <input type="radio" name={section.kgField} value="good" className="form-radio text-green-600" />
             <span className="ml-2">좋음</span>

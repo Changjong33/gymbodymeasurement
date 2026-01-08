@@ -28,15 +28,15 @@ export interface ExerciseEvaluation {
 export function getLevelName(score: number): string {
   switch (score) {
     case 1:
-      return "Beginner";
+      return "입문자";
     case 2:
-      return "Intermediate";
+      return "초급자";
     case 3:
-      return "Advanced";
+      return "중급자";
     case 4:
-      return "Elite";
+      return "상급자";
     case 5:
-      return "Elite";
+      return "엘리트";
     default:
       return "N/A";
   }
@@ -134,23 +134,14 @@ function collectIssuesByCategory(categoryId: number, measurementData: any, notes
 }
 
 // 문제점 기반 평가 텍스트 생성 - 텍스트 제거
-function generateEvaluationText(
-  categoryId: number,
-  exerciseName: string,
-  levelName: string,
-  issues: string[],
-  measurementData: any
-): string {
+function generateEvaluationText(categoryId: number, exerciseName: string, levelName: string, issues: string[], measurementData: any): string {
   return ""; // 텍스트 코멘트 제거
 }
 
 // Mock 데이터 생성 함수 (API 실패 시 사용)
-export function generateMockMeasurementsResponse(
-  measurementData: any,
-  selectedExerciseTypes: string[]
-): CalculateMeasurementsResponse {
+export function generateMockMeasurementsResponse(measurementData: any, selectedExerciseTypes: string[]): CalculateMeasurementsResponse {
   const results: MeasurementResult[] = [];
-  
+
   // 웨이트 트레이닝 (categoryId 1-7)
   if (selectedExerciseTypes.includes("weight")) {
     if (measurementData.benchKg) {
@@ -317,7 +308,14 @@ export function generateMockMeasurementsResponse(
     flexibilityMap.forEach(({ id, name, field }) => {
       const value = measurementData[field];
       if (value) {
-        const scoreMap: Record<string, number> = { good: 4, normal: 3, low: 2 };
+        // 5단계 평가: excellent=5, good=4, normal=3, bad=2, very_bad=1
+        const scoreMap: Record<string, number> = {
+          excellent: 5,
+          good: 4,
+          normal: 3,
+          bad: 2,
+          very_bad: 1,
+        };
         const score = scoreMap[value] || 3;
         results.push({
           categoryId: id,
@@ -335,11 +333,9 @@ export function generateMockMeasurementsResponse(
   }
 
   // totalSummary 계산
-  const averageScore = results.length > 0 
-    ? results.reduce((sum, r) => sum + r.score, 0) / results.length 
-    : 3;
+  const averageScore = results.length > 0 ? results.reduce((sum, r) => sum + r.score, 0) / results.length : 3;
   const overallLevel = getLevelName(Math.round(averageScore));
-  
+
   let description = "전반적인 신체 능력은 ";
   if (averageScore >= 4) {
     description += "우수한 수준입니다. 지속적인 유지와 더 나은 발전을 위해 다양한 운동을 시도해보세요.";
@@ -364,11 +360,7 @@ export function generateMockMeasurementsResponse(
 }
 
 // API 응답을 기반으로 총평 생성
-export function generateEvaluationFromApiResponse(
-  member: any,
-  apiResponse: CalculateMeasurementsResponse,
-  measurementData: any
-): EvaluationResult {
+export function generateEvaluationFromApiResponse(member: any, apiResponse: CalculateMeasurementsResponse, measurementData: any): EvaluationResult {
   const { weight, age, gender, height, name, notes = "" } = member;
   const genderText = gender === "male" ? "남성" : "여성";
 
@@ -404,16 +396,10 @@ export function generateEvaluationFromApiResponse(
     const levelName = getLevelName(result.score);
     // 유연성(unit === "level")의 경우 ratio 계산하지 않음
     const isFlexibility = result.categoryId >= 11 && result.categoryId <= 15;
-    const ratio = isFlexibility ? 0 : (weight > 0 ? result.value / weight : 0);
+    const ratio = isFlexibility ? 0 : weight > 0 ? result.value / weight : 0;
     const ratioText = ratio > 0 ? ratio.toFixed(2) : "0.00";
 
-    const evaluation = generateEvaluationText(
-      result.categoryId,
-      exerciseInfo.name,
-      levelName,
-      issues,
-      measurementData
-    );
+    const evaluation = generateEvaluationText(result.categoryId, exerciseInfo.name, levelName, issues, measurementData);
 
     exerciseEvaluations.push({
       name: exerciseInfo.name,
@@ -596,4 +582,3 @@ function evaluateShoulder(measurementData: any, weight: number): ExerciseEvaluat
     evaluation,
   };
 }
-

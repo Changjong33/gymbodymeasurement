@@ -11,12 +11,7 @@ export const getCheckbox = (formData: FormData, key: string): boolean => {
 };
 
 // FormData를 측정 데이터로 변환
-export function convertFormDataToMeasurement(
-  formData: FormData,
-  selectedMemberId: string,
-  memberName: string,
-  selectedExerciseTypes: string[]
-) {
+export function convertFormDataToMeasurement(formData: FormData, selectedMemberId: string, memberName: string, selectedExerciseTypes: string[]) {
   return {
     memberId: selectedMemberId,
     memberName,
@@ -141,13 +136,18 @@ export function convertMeasurementToApiRequest(measurementData: any) {
   Object.entries(flexibilityMap).forEach(([field, categoryId]) => {
     const value = measurementData[field];
     if (value) {
-      // good=3, normal=2, low=1로 변환
-      const scoreMap: Record<string, number> = { good: 3, normal: 2, low: 1 };
-      const numericValue = scoreMap[value] || 2;
+      // 5단계 평가: excellent=5, good=4, normal=3, bad=2, very_bad=1로 변환
+      const scoreMap: Record<string, number> = {
+        excellent: 5,
+        good: 4,
+        normal: 3,
+        bad: 2,
+        very_bad: 1,
+      };
+      const numericValue = scoreMap[value] || 3;
       measurements.push({ categoryId, value: numericValue });
     }
   });
 
   return measurements;
 }
-

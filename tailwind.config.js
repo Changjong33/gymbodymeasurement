@@ -5,7 +5,7 @@ module.exports = {
     extend: {
       fontFamily: {
         // High1 Daylily only
-        sans: ["High1Daylily"],
+        sans: ["system-ui", "-apple-system", "BlinkMacSystemFont", "Segoe UI", "Roboto", "Helvetica Neue", "Arial", "sans-serif"],
       },
     },
   },

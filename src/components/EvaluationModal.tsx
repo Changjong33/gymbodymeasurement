@@ -1,6 +1,7 @@
 import { EvaluationResult } from "@/lib/evaluationUtils";
 import { MeasurementResult } from "@/lib/api";
 import MeasurementRadarChart from "./MeasurementRadarChart";
+import { calculateLevelStandards } from "@/lib/levelStandards";
 
 interface EvaluationModalProps {
   evaluationResult: EvaluationResult;
@@ -22,8 +23,8 @@ export default function EvaluationModal({ evaluationResult, apiResults, selected
     const typeMap: Record<string, number[]> = {
       weight: [1, 3, 4, 6, 7], // 웨이트 트레이닝
       bodyweight: [2, 5, 8, 9, 10], // 맨몸 운동
-      flexibility: [11, 12, 13, 14, 15], // 유산소/유연성
-      aerobic: [11, 12, 13, 14, 15], // 유산소/유연성
+      flexibility: [11, 12, 13, 14, 15], // 유연성/유연성
+      aerobic: [11, 12, 13, 14, 15], // 유연성/유연성
     };
     return typeMap[exerciseType] || [];
   };
@@ -33,8 +34,8 @@ export default function EvaluationModal({ evaluationResult, apiResults, selected
     const typeMap: Record<string, string> = {
       weight: "웨이트 트레이닝",
       bodyweight: "맨몸 운동",
-      flexibility: "유산소",
-      aerobic: "유산소",
+      flexibility: "유연성",
+      aerobic: "유연성",
     };
     return typeMap[exerciseType] || exerciseType;
   };
@@ -47,8 +48,22 @@ export default function EvaluationModal({ evaluationResult, apiResults, selected
   };
   const genderText = member?.gender === "male" ? "남성" : member?.gender === "female" ? "여성" : "";
 
-  // 유산소가 아닌 종목들만 필터링
+  // 유연성이 아닌 종목들만 필터링
   const exerciseCards = evaluationResult.exerciseEvaluations.filter((exerciseEval) => exerciseEval.unit !== "level");
+
+  // 레벨 기준표 생성
+  const levelStandards = member ? calculateLevelStandards(member.age, member.weight, member.gender as "male" | "female") : [];
+
+  // 모든 문제점 수집 (종합 총평 제거, 문제점만 표시)
+  const allIssues: Array<{ exerciseName: string; issues: string[] }> = [];
+  exerciseCards.forEach((exerciseEval) => {
+    if (exerciseEval.issues && exerciseEval.issues.length > 0) {
+      allIssues.push({
+        exerciseName: exerciseEval.name,
+        issues: exerciseEval.issues,
+      });
+    }
+  });
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
@@ -73,13 +88,13 @@ export default function EvaluationModal({ evaluationResult, apiResults, selected
                   if (chartResults.length === 0) return null;
                   return (
                     <div key={exerciseType} className="flex-1 bg-white border border-gray-200 rounded-lg p-3 flex flex-col">
-                      <MeasurementRadarChart results={chartResults} title={getChartTitle(exerciseType)} />
+                      <MeasurementRadarChart results={chartResults} title={getChartTitle(exerciseType)} showDataLabels={true} exerciseType={exerciseType} />
                     </div>
                   );
                 })
               ) : (
                 <div className="flex-1 bg-white border border-gray-200 rounded-lg p-3 flex flex-col">
-                  <MeasurementRadarChart results={apiResults} title="신체 부위별 운동 능력 차트" />
+                  <MeasurementRadarChart results={apiResults} title="신체 부위별 운동 능력 차트" showDataLabels={true} />
                 </div>
               )}
             </div>
@@ -95,23 +110,17 @@ export default function EvaluationModal({ evaluationResult, apiResults, selected
                   </div>
                   <div className="grid grid-cols-2 gap-3">
                     <div>
-                      <div className="text-xs text-gray-500 mb-1">나이</div>
-                      <div className="text-base font-semibold text-gray-800">{member.age}세</div>
-                    </div>
-                    <div>
                       <div className="text-xs text-gray-500 mb-1">성별</div>
                       <div className="text-base font-semibold text-gray-800">{genderText}</div>
                     </div>
+                    <div>
+                      <div className="text-xs text-gray-500 mb-1">나이</div>
+                      <div className="text-base font-semibold text-gray-800">{member.age}세</div>
+                    </div>
                   </div>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <div className="text-xs text-gray-500 mb-1">키</div>
-                      <div className="text-base font-semibold text-gray-800">{member.height}cm</div>
-                    </div>
-                    <div>
-                      <div className="text-xs text-gray-500 mb-1">몸무게</div>
-                      <div className="text-base font-semibold text-gray-800">{member.weight}kg</div>
-                    </div>
+                  <div>
+                    <div className="text-xs text-gray-500 mb-1">몸무게</div>
+                    <div className="text-base font-semibold text-gray-800">{member.weight}kg</div>
                   </div>
                 </div>
                 <div className="mt-4 pt-4 border-t border-blue-200">
@@ -126,47 +135,69 @@ export default function EvaluationModal({ evaluationResult, apiResults, selected
             )}
           </div>
 
-          {/* 하단 영역: 종목별 결과 카드 가로 배치 */}
-          <div className="flex-1 min-h-0">
-            <div className="h-full overflow-x-auto overflow-y-hidden">
-              <div className="flex gap-3 h-full" style={{ minWidth: "max-content" }}>
-                {exerciseCards.map((exerciseEval, index) => (
-                  <div key={index} className="flex-shrink-0 w-80 bg-white border-2 border-gray-200 rounded-lg p-4 shadow-sm hover:shadow-md transition-shadow flex flex-col">
-                    <div className="flex items-center justify-between mb-3">
-                      <div className="flex items-center gap-2">
-                        <span className="text-2xl">{exerciseEval.emoji}</span>
-                        <div>
-                          <h3 className="font-bold text-base text-gray-800 leading-tight">{exerciseEval.name}</h3>
-                          <div className="text-xs text-gray-600 mt-0.5">{exerciseEval.unit === "reps" ? <>{exerciseEval.weightKg}회</> : <>{exerciseEval.weightKg}kg</>}</div>
-                        </div>
-                      </div>
-                      <div className="bg-blue-100 px-2 py-1.5 rounded-lg">
-                        <div className="text-xs text-blue-600 font-medium mb-0.5">Level</div>
-                        <div className="text-sm font-bold text-blue-800">{exerciseEval.levelText || exerciseEval.level}</div>
-                        {exerciseEval.score > 0 && <div className="text-xs text-blue-600 mt-0.5">Score: {exerciseEval.score}</div>}
-                      </div>
-                    </div>
-                    {exerciseEval.unit !== "reps" && (
-                      <div className="mt-2 pt-2 border-t border-gray-200">
-                        <div className="text-xs text-gray-600">
-                          <span className="font-medium">체중 대비:</span> {exerciseEval.ratioText}배
-                        </div>
-                      </div>
-                    )}
-                    {exerciseEval.issues && exerciseEval.issues.length > 0 && (
-                      <div className="mt-2 pt-2 border-t border-gray-200 flex-1 flex flex-col min-h-0">
-                        <div className="text-xs font-medium text-red-600 mb-1">문제점:</div>
-                        <ul className="list-disc list-inside text-xs text-gray-700 space-y-0.5 overflow-y-auto">
-                          {exerciseEval.issues.map((issue, i) => (
-                            <li key={i} className="leading-tight">
-                              {issue}
-                            </li>
+          {/* 하단 영역: 레벨 도달 기준표 + 문제점 */}
+          <div className="flex-1 min-h-0 grid grid-cols-12 gap-4">
+            {/* 좌측: 레벨 도달 기준표 */}
+            <div className="col-span-8 bg-white border border-gray-200 rounded-lg p-4 overflow-hidden flex flex-col">
+              <div className="flex items-center gap-3">
+                <h3 className="text-lg font-bold text-gray-800 mb-3">레벨 도달 기준표</h3>
+                {member && (
+                  <div className="text-xs text-gray-600 mb-3">
+                    기준: {member.age}세, {member.weight}kg ({genderText})
+                  </div>
+                )}
+              </div>
+              <div className="flex-1 overflow-auto">
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm border-collapse">
+                    <thead>
+                      <tr className="bg-gray-50 border-b-2 border-gray-300">
+                        <th className="px-3 py-2 text-left font-semibold text-gray-700">종목</th>
+                        <th className="px-3 py-2 text-center font-semibold text-gray-700">입문자</th>
+                        <th className="px-3 py-2 text-center font-semibold text-gray-700">초급자</th>
+                        <th className="px-3 py-2 text-center font-semibold text-gray-700">중급자</th>
+                        <th className="px-3 py-2 text-center font-semibold text-gray-700">상급자</th>
+                        <th className="px-3 py-2 text-center font-semibold text-gray-700">엘리트</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {levelStandards.map((standard, index) => (
+                        <tr key={index} className="border-b border-gray-200 hover:bg-gray-50">
+                          <td className="px-3 py-2 font-medium text-gray-800">{standard.exerciseName}</td>
+                          {standard.levels.map((level, levelIndex) => (
+                            <td key={levelIndex} className="px-3 py-2 text-center text-gray-700">
+                              {level.value}
+                              {standard.unit === "회" ? "회" : standard.unit === "kg" ? "kg" : ""}
+                            </td>
+                          ))}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+
+            {/* 우측: 문제점 표시 영역 */}
+            <div className="col-span-4 bg-white border-2 border-gray-200 rounded-lg p-4 flex flex-col">
+              <h3 className="text-lg font-bold text-gray-800 mb-3">관찰된 문제점</h3>
+              <div className="flex-1 overflow-y-auto">
+                {allIssues.length > 0 ? (
+                  <div className="space-y-3">
+                    {allIssues.map((item, index) => (
+                      <div key={index} className="border-b border-gray-200 pb-2 last:border-0">
+                        <div className="text-sm font-semibold text-gray-700 mb-1">{item.exerciseName}</div>
+                        <ul className="list-disc list-inside text-xs text-gray-600 space-y-0.5">
+                          {item.issues.map((issue, i) => (
+                            <li key={i}>{issue}</li>
                           ))}
                         </ul>
                       </div>
-                    )}
+                    ))}
                   </div>
-                ))}
+                ) : (
+                  <div className="text-sm text-gray-500 text-center py-8">관찰된 문제점이 없습니다.</div>
+                )}
               </div>
             </div>
           </div>

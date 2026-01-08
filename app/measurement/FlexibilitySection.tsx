@@ -54,7 +54,11 @@ export default function FlexibilitySection({ section }: { section: FlexibilitySe
     <div>
       <h3 className="text-xl font-bold text-gray-800 mb-2">{section.title}</h3>
       <div className="mt-4">
-        <div className="flex gap-6">
+        <div className="flex gap-4 flex-wrap">
+          <label className="inline-flex items-center">
+            <input type="radio" name={section.kgField} value="excellent" className="form-radio text-green-600" />
+            <span className="ml-2">매우좋음</span>
+          </label>
           <label className="inline-flex items-center">
             <input type="radio" name={section.kgField} value="good" className="form-radio text-green-600" />
             <span className="ml-2">좋음</span>
@@ -64,8 +68,12 @@ export default function FlexibilitySection({ section }: { section: FlexibilitySe
             <span className="ml-2">보통</span>
           </label>
           <label className="inline-flex items-center">
-            <input type="radio" name={section.kgField} value="low" className="form-radio text-green-600" />
-            <span className="ml-2">낮음</span>
+            <input type="radio" name={section.kgField} value="bad" className="form-radio text-green-600" />
+            <span className="ml-2">나쁨</span>
+          </label>
+          <label className="inline-flex items-center">
+            <input type="radio" name={section.kgField} value="very_bad" className="form-radio text-green-600" />
+            <span className="ml-2">매우나쁨</span>
           </label>
         </div>
       </div>

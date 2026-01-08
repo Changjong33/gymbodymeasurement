@@ -33,6 +33,11 @@ const categoryIdToBodyPart = (categoryId: number): string | null => {
     8: "가슴", // 푸쉬업
     9: "하체", // 스쿼트
     10: "전신", // 버피
+    11: "전신", // 유연성 – 흉추 가동성
+    12: "어깨", // 유연성 – 어깨 유연성
+    13: "하체", // 유연성 – 햄스트링
+    14: "하체", // 유연성 – 고관절
+    15: "하체", // 유연성 – 발목 가동성
   };
   return mapping[categoryId] || null;
 };

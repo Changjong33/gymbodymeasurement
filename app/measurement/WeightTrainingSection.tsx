@@ -89,7 +89,15 @@ export default function WeightTrainingSection({ section }: { section: WeightTrai
           <label className="block font-medium mb-1 text-gray-700" htmlFor={section.kgField}>
             무게 (kg)
           </label>
-          <input id={section.kgField} name={section.kgField} type="number" min="0" className="w-full border border-gray-300 rounded-md px-3 py-2" placeholder="무게" />
+          <input
+            id={section.kgField}
+            name={section.kgField}
+            type="number"
+            min="0"
+            className="w-full border border-gray-300 rounded-md px-3 py-2"
+            placeholder="무게"
+            onWheel={(e) => e.currentTarget.blur()}
+          />
         </div>
       </div>
       <div className="mt-4">

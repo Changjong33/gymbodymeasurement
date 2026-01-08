@@ -6,7 +6,7 @@ import { useMeasurementStore } from "@/store/measurementStore";
 import { useAuthStore } from "@/store/authStore";
 import { useRouter } from "next/navigation";
 import { calculateMeasurementsApi } from "@/lib/api";
-import { generateEvaluationFromApiResponse, generateEvaluation, EvaluationResult } from "@/lib/evaluationUtils";
+import { generateEvaluationFromApiResponse, generateEvaluation, generateMockMeasurementsResponse, EvaluationResult } from "@/lib/evaluationUtils";
 import { convertFormDataToMeasurement, convertMeasurementToApiRequest } from "@/lib/measurementUtils";
 import { ExerciseType, BaseSection } from "@/types/exercise";
 import { weightTrainingSections } from "./WeightTrainingSection";
@@ -149,10 +149,22 @@ export default function MeasurementPage() {
       if (measurements.length > 0) {
         // memberId를 숫자로 변환 (API가 숫자를 기대함)
         const memberIdNum = parseInt(selectedMemberId.replace(/\D/g, "")) || parseInt(selectedMemberId);
-        apiResponse = await calculateMeasurementsApi({
-          memberId: memberIdNum,
-          measurements,
-        });
+        try {
+          apiResponse = await calculateMeasurementsApi({
+            memberId: memberIdNum,
+            measurements,
+          });
+        } catch (apiError: any) {
+          // API 호출 실패 시 mock 데이터 생성
+          console.warn("측정 계산 API 호출 실패, mock 데이터 사용:", apiError?.response?.status || apiError?.message);
+          // member weight 정보를 measurementData에 추가
+          const measurementDataWithWeight = { ...measurementData, memberWeight: selectedMember.weight };
+          apiResponse = generateMockMeasurementsResponse(measurementDataWithWeight, selectedExerciseTypes);
+        }
+      } else {
+        // measurements가 비어있으면 mock 데이터 생성
+        const measurementDataWithWeight = { ...measurementData, memberWeight: selectedMember.weight };
+        apiResponse = generateMockMeasurementsResponse(measurementDataWithWeight, selectedExerciseTypes);
       }
 
       // 로컬 스토어에 저장
@@ -167,15 +179,29 @@ export default function MeasurementPage() {
       setShowMeasurementForm(false);
       setShowEvaluation(true);
     } catch (error: any) {
-      console.error("측정 계산 API 호출 실패:", error);
-      // API 실패 시 기존 방식으로 총평 생성
-      addMeasurement(measurementData);
-      const evaluation = generateEvaluation(selectedMember, measurementData);
-      setEvaluationResult(evaluation);
-      setApiResponseResults([]);
-      setIsSubmitting(false);
-      setShowMeasurementForm(false);
-      setShowEvaluation(true);
+      console.error("측정 데이터 처리 중 오류:", error);
+      // 예상치 못한 오류 발생 시에도 mock 데이터로 처리
+      try {
+        const measurementDataWithWeight = { ...measurementData, memberWeight: selectedMember.weight };
+        const mockResponse = generateMockMeasurementsResponse(measurementDataWithWeight, selectedExerciseTypes);
+        addMeasurement(measurementData);
+        const evaluation = generateEvaluationFromApiResponse(selectedMember, mockResponse, measurementData);
+        setEvaluationResult(evaluation);
+        setApiResponseResults(mockResponse.data.results);
+        setIsSubmitting(false);
+        setShowMeasurementForm(false);
+        setShowEvaluation(true);
+      } catch (fallbackError) {
+        // 최후의 수단: 기존 방식
+        console.error("Mock 데이터 생성 실패, 기존 방식 사용:", fallbackError);
+        addMeasurement(measurementData);
+        const evaluation = generateEvaluation(selectedMember, measurementData);
+        setEvaluationResult(evaluation);
+        setApiResponseResults([]);
+        setIsSubmitting(false);
+        setShowMeasurementForm(false);
+        setShowEvaluation(true);
+      }
     }
   };
 

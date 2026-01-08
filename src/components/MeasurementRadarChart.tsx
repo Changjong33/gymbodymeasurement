@@ -1,14 +1,6 @@
 "use client";
 
-import {
-  Chart as ChartJS,
-  RadialLinearScale,
-  PointElement,
-  LineElement,
-  Filler,
-  Tooltip,
-  Legend,
-} from "chart.js";
+import { Chart as ChartJS, RadialLinearScale, PointElement, LineElement, Filler, Tooltip, Legend } from "chart.js";
 import { Radar } from "react-chartjs-2";
 import { MeasurementResult } from "@/lib/api";
 
@@ -16,8 +8,17 @@ import { MeasurementResult } from "@/lib/api";
 ChartJS.register(RadialLinearScale, PointElement, LineElement, Filler, Tooltip, Legend);
 
 interface MeasurementRadarChartProps {
-  results: MeasurementResult[];
+  results?: MeasurementResult[];
 }
+
+// 임시 mock 데이터 (백엔드 API 없이도 차트 렌더링용)
+const MOCK_RADAR_DATA = {
+  전신: 4,
+  하체: 3,
+  어깨: 5,
+  등: 4,
+  가슴: 4,
+};
 
 // categoryId → 부위 매핑
 const categoryIdToBodyPart = (categoryId: number): string | null => {
@@ -37,7 +38,14 @@ const categoryIdToBodyPart = (categoryId: number): string | null => {
 };
 
 // API 결과 → Radar Chart 데이터로 변환
-const convertResultsToRadarData = (results: MeasurementResult[]) => {
+const convertResultsToRadarData = (results?: MeasurementResult[]) => {
+  // results가 없거나 비어있으면 mock 데이터 사용
+  if (!results || results.length === 0) {
+    const labels = ["전신", "하체", "어깨", "등", "가슴"];
+    const data = labels.map((bodyPart) => MOCK_RADAR_DATA[bodyPart as keyof typeof MOCK_RADAR_DATA] || 0);
+    return { labels, data };
+  }
+
   // 부위별 점수 그룹화
   const bodyPartScores: Record<string, number[]> = {
     전신: [],
@@ -70,7 +78,7 @@ const convertResultsToRadarData = (results: MeasurementResult[]) => {
 };
 
 export default function MeasurementRadarChart({ results }: MeasurementRadarChartProps) {
-  const { labels, data } = convertResultsToRadarData(results);
+  const { labels, data } = convertResultsToRadarData(results || []);
 
   const chartData = {
     labels,
@@ -138,4 +146,3 @@ export default function MeasurementRadarChart({ results }: MeasurementRadarChart
     </div>
   );
 }
-

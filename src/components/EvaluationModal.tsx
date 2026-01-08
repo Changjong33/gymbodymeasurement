@@ -35,11 +35,9 @@ export default function EvaluationModal({
           </div>
 
           {/* Radar Chart */}
-          {apiResults && apiResults.length > 0 && (
-            <div className="bg-white border border-gray-200 rounded-lg p-4">
-              <MeasurementRadarChart results={apiResults} />
-            </div>
-          )}
+          <div className="bg-white border border-gray-200 rounded-lg p-4">
+            <MeasurementRadarChart results={apiResults} />
+          </div>
 
           {/* 부위별 총평 */}
           {evaluationResult.exerciseEvaluations.map((exerciseEval, index) => (

@@ -31,6 +31,7 @@ export default function MeasurementPage() {
   const [showMeasurementForm, setShowMeasurementForm] = useState(false);
   const [showEvaluation, setShowEvaluation] = useState(false);
   const [evaluationResult, setEvaluationResult] = useState<EvaluationResult | null>(null);
+  const [apiResponseResults, setApiResponseResults] = useState<any[]>([]);
 
   // 실제 인증 상태 가져오기 (개발 모드 우회 포함)
   const { isLoggedIn } = getEffectiveAuth();
@@ -161,6 +162,7 @@ export default function MeasurementPage() {
       const evaluation = apiResponse ? generateEvaluationFromApiResponse(selectedMember, apiResponse, measurementData) : generateEvaluation(selectedMember, measurementData);
 
       setEvaluationResult(evaluation);
+      setApiResponseResults(apiResponse?.data?.results || []);
       setIsSubmitting(false);
       setShowMeasurementForm(false);
       setShowEvaluation(true);
@@ -170,6 +172,7 @@ export default function MeasurementPage() {
       addMeasurement(measurementData);
       const evaluation = generateEvaluation(selectedMember, measurementData);
       setEvaluationResult(evaluation);
+      setApiResponseResults([]);
       setIsSubmitting(false);
       setShowMeasurementForm(false);
       setShowEvaluation(true);
@@ -179,6 +182,7 @@ export default function MeasurementPage() {
   const handleCloseEvaluation = () => {
     setShowEvaluation(false);
     setEvaluationResult(null);
+    setApiResponseResults([]);
     setShowSuccess(true);
     setSelectedMemberId("");
     setSelectedExerciseTypes([]);
@@ -342,7 +346,7 @@ export default function MeasurementPage() {
       </div>
 
       {/* 총평 모달 */}
-      {showEvaluation && evaluationResult && <EvaluationModal evaluationResult={evaluationResult} onClose={handleCloseEvaluation} />}
+      {showEvaluation && evaluationResult && <EvaluationModal evaluationResult={evaluationResult} apiResults={apiResponseResults} onClose={handleCloseEvaluation} />}
     </div>
   );
 }

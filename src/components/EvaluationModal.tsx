@@ -1,12 +1,16 @@
 import { EvaluationResult } from "@/lib/evaluationUtils";
+import { MeasurementResult } from "@/lib/api";
+import MeasurementRadarChart from "./MeasurementRadarChart";
 
 interface EvaluationModalProps {
   evaluationResult: EvaluationResult;
+  apiResults?: MeasurementResult[];
   onClose: () => void;
 }
 
 export default function EvaluationModal({
   evaluationResult,
+  apiResults,
   onClose,
 }: EvaluationModalProps) {
   return (
@@ -29,6 +33,13 @@ export default function EvaluationModal({
               {evaluationResult.basicInfo}
             </p>
           </div>
+
+          {/* Radar Chart */}
+          {apiResults && apiResults.length > 0 && (
+            <div className="bg-white border border-gray-200 rounded-lg p-4">
+              <MeasurementRadarChart results={apiResults} />
+            </div>
+          )}
 
           {/* 부위별 총평 */}
           {evaluationResult.exerciseEvaluations.map((exerciseEval, index) => (

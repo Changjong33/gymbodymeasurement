@@ -71,6 +71,7 @@ export default function LoginPage() {
       const responseData: any = "data" in response && response.data ? response.data : response;
       const ownerName = responseData.gym?.ownerName || responseData.user?.ownerName || responseData.user?.name || email.split("@")[0];
       const token = responseData.accessToken || responseData.token;
+      const refreshToken = responseData.refreshToken;
       const gymId = responseData.gym?.id;
 
       if (process.env.NEXT_PUBLIC_APP_ENV === "development" || process.env.NODE_ENV === "development") {
@@ -94,13 +95,18 @@ export default function LoginPage() {
         return;
       }
 
-      // 액세스 토큰을 로컬스토리지에 저장
-      if (typeof window !== "undefined" && token) {
+      // 액세스 토큰 / 리프레시 토큰을 로컬스토리지에 저장
+      if (typeof window !== "undefined") {
         try {
-          localStorage.setItem("accessToken", token);
+          if (token) {
+            localStorage.setItem("accessToken", token);
+          }
+          if (refreshToken) {
+            localStorage.setItem("refreshToken", refreshToken);
+          }
         } catch (storageError) {
           if (process.env.NEXT_PUBLIC_APP_ENV === "development" || process.env.NODE_ENV === "development") {
-            console.warn("accessToken 로컬스토리지 저장 실패:", storageError);
+            console.warn("토큰 로컬스토리지 저장 실패:", storageError);
           }
         }
       }

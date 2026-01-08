@@ -51,6 +51,32 @@ export const weightTrainingSections: WeightTrainingSection[] = [
       { name: "shoulderCore", label: "코어 불안정" },
     ],
   },
+  {
+    title: "[등] 바벨로우",
+    prefix: "barbellRow",
+    kgField: "barbellRowKg",
+    category: "weight",
+    fieldType: "kg",
+    options: [
+      { name: "barbellRowArms", label: "팔 위주로 당겨짐 (등 개입 부족)" },
+      { name: "barbellRowLatsFeel", label: "광배 자극 인지 어려움" },
+      { name: "barbellRowLowerBack", label: "허리 부담 느낌" },
+      { name: "barbellRowImbalance", label: "좌우 힘 차이 느낌" },
+    ],
+  },
+  {
+    title: "[전신] 데드리프트",
+    prefix: "deadlift",
+    kgField: "deadliftKg",
+    category: "weight",
+    fieldType: "kg",
+    options: [
+      { name: "deadliftLowerBack", label: "허리 부담 느낌" },
+      { name: "deadliftFormBreakdown", label: "동작 정확도 저하 (둥근 등)" },
+      { name: "deadliftGrip", label: "그립 유지 어려움" },
+      { name: "deadliftBalance", label: "균형 불안정" },
+    ],
+  },
 ];
 
 // 웨이트 트레이닝 섹션 컴포넌트

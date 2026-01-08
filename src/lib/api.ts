@@ -1,4 +1,5 @@
 import axios from "axios";
+import { useAuthStore } from "@/store/authStore";
 
 // API 기본 URL (환경변수가 없을 경우 기본값 사용)
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "https://portfolio-fitspec.onrender.com";
@@ -46,6 +47,150 @@ const devError = (...args: any[]) => {
     console.error(...args);
   }
 };
+
+// ===== 토큰 자동 갱신 및 세션 만료 처리 =====
+let isRefreshing = false;
+let refreshPromise: Promise<string | null> | null = null;
+
+const getRefreshTokenFromStorage = (): string | null => {
+  if (typeof window === "undefined") return null;
+  try {
+    return localStorage.getItem("refreshToken");
+  } catch {
+    return null;
+  }
+};
+
+const saveTokensToStorage = (accessToken?: string, refreshToken?: string) => {
+  if (typeof window === "undefined") return;
+  try {
+    if (accessToken) {
+      localStorage.setItem("accessToken", accessToken);
+    }
+    if (refreshToken) {
+      localStorage.setItem("refreshToken", refreshToken);
+    }
+  } catch (e) {
+    devError("토큰 저장 실패:", e);
+  }
+};
+
+const clearTokensAndLogout = () => {
+  if (typeof window === "undefined") return;
+  try {
+    localStorage.removeItem("accessToken");
+    localStorage.removeItem("refreshToken");
+  } catch (e) {
+    devError("토큰 제거 실패:", e);
+  }
+
+  try {
+    const { logout } = useAuthStore.getState();
+    logout();
+  } catch (e) {
+    devError("authStore logout 실패:", e);
+  }
+
+  // 세션 만료 안내 후 로그인 페이지로 이동
+  alert("세션이 만료되었습니다. 다시 로그인해주세요.");
+  window.location.href = "/login";
+};
+
+// Access Token 갱신 요청
+const refreshAccessToken = async (): Promise<string | null> => {
+  if (typeof window === "undefined") return null;
+
+  const existingRefreshToken = getRefreshTokenFromStorage();
+  if (!existingRefreshToken) {
+    devError("refreshToken 이 없습니다. 세션 만료 처리.");
+    return null;
+  }
+
+  if (isRefreshing && refreshPromise) {
+    return refreshPromise;
+  }
+
+  isRefreshing = true;
+  refreshPromise = (async () => {
+    try {
+      devLog("AccessToken 갱신 시도");
+      // 인터셉터를 타지 않도록 axios 기본 인스턴스 사용
+      const res = await axios.post(
+        `${API_BASE_URL}/auth/refresh`,
+        { refreshToken: existingRefreshToken },
+        {
+          headers: {
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      const data: any = "data" in res.data && res.data.data ? res.data.data : res.data;
+      const newAccessToken: string | undefined = data.accessToken || data.token;
+      const newRefreshToken: string | undefined = data.refreshToken;
+
+      if (!newAccessToken) {
+        devError("갱신 응답에 accessToken 이 없습니다.");
+        return null;
+      }
+
+      saveTokensToStorage(newAccessToken, newRefreshToken);
+      devLog("AccessToken 갱신 성공");
+      return newAccessToken;
+    } catch (error: any) {
+      devError("AccessToken 갱신 실패:", error?.response?.data || error?.message);
+      return null;
+    } finally {
+      isRefreshing = false;
+      refreshPromise = null;
+    }
+  })();
+
+  return refreshPromise;
+};
+
+// 응답 인터셉터: 401 발생 시 Access Token 갱신 시도
+api.interceptors.response.use(
+  (response) => response,
+  async (error) => {
+    const originalRequest = error.config;
+
+    // 서버 응답이 없거나 브라우저 환경이 아니면 그대로 에러 반환
+    if (!error.response || typeof window === "undefined") {
+      return Promise.reject(error);
+    }
+
+    const status = error.response.status;
+
+    // 401이 아닐 경우 그대로 에러 반환
+    if (status !== 401) {
+      return Promise.reject(error);
+    }
+
+    // 이미 한 번 재시도한 요청이면 세션 만료로 처리
+    if ((originalRequest as any)._retry) {
+      clearTokensAndLogout();
+      return Promise.reject(error);
+    }
+
+    (originalRequest as any)._retry = true;
+
+    // Access Token 갱신 시도
+    const newAccessToken = await refreshAccessToken();
+
+    if (!newAccessToken) {
+      // Refresh Token 만료 또는 갱신 실패 → 세션 만료 처리
+      clearTokensAndLogout();
+      return Promise.reject(error);
+    }
+
+    // 갱신 성공 시 Authorization 헤더 업데이트 후 요청 재시도
+    originalRequest.headers = originalRequest.headers || {};
+    originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
+
+    return api(originalRequest);
+  }
+);
 
 // 로그인 API
 export interface LoginRequest {

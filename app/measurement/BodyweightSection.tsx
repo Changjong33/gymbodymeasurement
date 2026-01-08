@@ -38,6 +38,45 @@ export const bodyweightSections: BodyweightSection[] = [
       { name: "situpBodyShake", label: "상체 흔들림" },
     ],
   },
+  {
+    title: "[하체] 스쿼트",
+    prefix: "bodyweightSquat",
+    kgField: "bodyweightSquatReps",
+    fieldType: "reps",
+    category: "bodyweight",
+    options: [
+      { name: "bodyweightSquatDepth", label: "스쿼트 깊이 제한적 (병렬 이하 어려움)" },
+      { name: "bodyweightSquatKneePain", label: "무릎 통증 발생" },
+      { name: "bodyweightSquatLowerBack", label: "허리 부담 느낌" },
+      { name: "bodyweightSquatBalance", label: "좌우 밸런스 불안정" },
+    ],
+  },
+  {
+    title: "[가슴] 푸쉬업",
+    prefix: "pushup",
+    kgField: "pushupReps",
+    fieldType: "reps",
+    category: "bodyweight",
+    options: [
+      { name: "pushupShoulderDiscomfort", label: "어깨 불편감" },
+      { name: "pushupRangeLimit", label: "가동 범위 제한" },
+      { name: "pushupImbalance", label: "좌우 힘 차이 느낌" },
+      { name: "pushupCoreUnstable", label: "코어 불안정 (허리 처짐)" },
+    ],
+  },
+  {
+    title: "[전신] 버피",
+    prefix: "burpee",
+    kgField: "burpeeReps",
+    fieldType: "reps",
+    category: "bodyweight",
+    options: [
+      { name: "burpeeBreathing", label: "호흡 조절 어려움" },
+      { name: "burpeeFormBreakdown", label: "동작 정확도 저하" },
+      { name: "burpeeLowerBack", label: "허리 불편감" },
+      { name: "burpeeEndurance", label: "지구력 부족 (빠른 피로)" },
+    ],
+  },
 ];
 
 // 맨몸운동 섹션 컴포넌트

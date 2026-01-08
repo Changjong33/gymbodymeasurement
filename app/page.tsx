@@ -30,9 +30,9 @@ export default function Home() {
         <h2 className="text-2xl font-bold text-gray-800 mb-4">시작하기</h2>
         <p className="text-gray-600 mb-4">좌측 메뉴에서 원하는 기능을 선택하거나, 위의 빠른 액션 카드를 클릭하여 시작하세요.</p>
         <ul className="list-disc list-inside text-gray-600 space-y-2">
-          <li>회원정보등록: 새로운 회원의 정보를 등록합니다</li>
-          <li>회원점수측정: 회원의 체력 및 신체 측정 점수를 기록합니다</li>
-          <li>회원정보목록: 등록된 모든 회원 정보를 조회하고 관리합니다</li>
+          <li>회원정보등록: 새로운 회원의 정보를 등록합니다.</li>
+          <li>회원점수측정: 회원의 체력 및 신체 측정 점수를 기록합니다.</li>
+          <li>회원정보목록: 등록된 모든 회원 정보를 조회하고 관리합니다.</li>
         </ul>
       </div>
     </div>

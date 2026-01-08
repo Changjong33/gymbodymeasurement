@@ -372,7 +372,21 @@ export default function MeasurementPage() {
       </div>
 
       {/* 총평 모달 */}
-      {showEvaluation && evaluationResult && <EvaluationModal evaluationResult={evaluationResult} apiResults={apiResponseResults} onClose={handleCloseEvaluation} />}
+      {showEvaluation && evaluationResult && selectedMember && (
+        <EvaluationModal
+          evaluationResult={evaluationResult}
+          apiResults={apiResponseResults}
+          selectedExerciseTypes={selectedExerciseTypes}
+          member={{
+            name: selectedMember.name,
+            age: selectedMember.age,
+            gender: selectedMember.gender,
+            height: selectedMember.height,
+            weight: selectedMember.weight,
+          }}
+          onClose={handleCloseEvaluation}
+        />
+      )}
     </div>
   );
 }

@@ -9,6 +9,7 @@ ChartJS.register(RadialLinearScale, PointElement, LineElement, Filler, Tooltip, 
 
 interface MeasurementRadarChartProps {
   results?: MeasurementResult[];
+  title?: string;
 }
 
 // 임시 mock 데이터 (백엔드 API 없이도 차트 렌더링용)
@@ -82,14 +83,14 @@ const convertResultsToRadarData = (results?: MeasurementResult[]) => {
   return { labels, data };
 };
 
-export default function MeasurementRadarChart({ results }: MeasurementRadarChartProps) {
+export default function MeasurementRadarChart({ results, title }: MeasurementRadarChartProps) {
   const { labels, data } = convertResultsToRadarData(results || []);
 
   const chartData = {
     labels,
     datasets: [
       {
-        label: "신체 부위별 운동 능력",
+        label: title || "신체 부위별 운동 능력",
         data,
         backgroundColor: "rgba(34, 197, 94, 0.2)", // green-500 with opacity
         borderColor: "rgba(34, 197, 94, 1)", // green-500
@@ -104,7 +105,7 @@ export default function MeasurementRadarChart({ results }: MeasurementRadarChart
 
   const chartOptions = {
     responsive: true,
-    maintainAspectRatio: true,
+    maintainAspectRatio: false,
     aspectRatio: 1,
     scales: {
       r: {
@@ -114,12 +115,12 @@ export default function MeasurementRadarChart({ results }: MeasurementRadarChart
         ticks: {
           stepSize: 1,
           font: {
-            size: 12,
+            size: 10,
           },
         },
         pointLabels: {
           font: {
-            size: 14,
+            size: 11,
             weight: "bold" as const,
           },
         },
@@ -143,9 +144,9 @@ export default function MeasurementRadarChart({ results }: MeasurementRadarChart
   };
 
   return (
-    <div className="w-full max-w-md mx-auto p-4 bg-white rounded-lg border border-gray-200">
-      <h3 className="text-lg font-semibold text-gray-800 mb-4 text-center">신체 부위별 운동 능력 차트</h3>
-      <div className="relative w-full" style={{ height: "400px" }}>
+    <div className="w-full h-full flex flex-col bg-white rounded-lg">
+      {title && <h3 className="text-sm font-semibold text-gray-800 mb-2 text-center">{title}</h3>}
+      <div className="flex-1 relative w-full min-h-0">
         <Radar data={chartData} options={chartOptions} />
       </div>
     </div>

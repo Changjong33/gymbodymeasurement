@@ -43,3 +43,140 @@
     -moz-appearance: textfield;
   }
 }
+
+/* EvaluationModal 인쇄 스타일 */
+@media print {
+  /* 페이지 설정 - A4 기준, 다른 용지는 브라우저/프린터에서 자동 스케일링 */
+  @page {
+    size: A4;
+    margin: 15mm;
+  }
+
+  /* 전체 배경 흰색 강제 */
+  body {
+    background: white !important;
+  }
+
+  /* 모달 외 다른 화면 요소 숨김 */
+  body > *:not(.evaluation-modal-overlay) {
+    display: none !important;
+  }
+  
+  /* 모달 오버레이 내부의 print-area만 표시 */
+  .evaluation-modal-overlay {
+    display: block !important;
+  }
+
+  /* 모달 오버레이 제거 */
+  .evaluation-modal-overlay {
+    position: static !important;
+    background: transparent !important;
+    padding: 0 !important;
+  }
+
+  /* 모달 컨테이너 */
+  .evaluation-modal-container {
+    position: static !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    height: auto !important;
+    max-height: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    box-shadow: none !important;
+    border-radius: 0 !important;
+    background: white !important;
+  }
+
+  /* 인쇄하지 않을 요소 숨김 */
+  .no-print {
+    display: none !important;
+  }
+
+  /* 인쇄 영역 */
+  .print-area {
+    display: block !important;
+  }
+
+  /* 스크롤 영역 해제 */
+  .print-area * {
+    overflow: visible !important;
+    height: auto !important;
+    max-height: none !important;
+  }
+
+  /* 헤더 */
+  .evaluation-modal-header {
+    border-bottom: 2px solid #000 !important;
+    padding: 12px 0 !important;
+    margin-bottom: 16px !important;
+  }
+
+  /* 메인 콘텐츠 */
+  .evaluation-modal-content {
+    display: block !important;
+    padding: 0 !important;
+    gap: 0 !important;
+  }
+
+  /* 좌측 영역 */
+  .evaluation-modal-left {
+    width: 100% !important;
+    margin-bottom: 20px !important;
+  }
+
+  /* 차트 영역 */
+  .evaluation-modal-chart {
+    height: auto !important;
+    min-height: 300px !important;
+    margin-bottom: 20px !important;
+    page-break-inside: avoid;
+  }
+
+  /* 레벨 기준표 */
+  .evaluation-modal-table-container {
+    height: auto !important;
+    overflow: visible !important;
+    page-break-inside: avoid;
+  }
+
+  .evaluation-modal-table {
+    page-break-inside: avoid;
+  }
+
+  .evaluation-modal-table tbody tr {
+    page-break-inside: avoid;
+    page-break-after: auto;
+  }
+
+  /* 우측 영역 */
+  .evaluation-modal-right {
+    width: 100% !important;
+    margin-top: 20px !important;
+  }
+
+  /* 카드 스타일 */
+  .evaluation-modal-card {
+    border: 1px solid #000 !important;
+    border-radius: 0 !important;
+    padding: 12px !important;
+    margin-bottom: 16px !important;
+    page-break-inside: avoid;
+    background: white !important;
+  }
+
+  /* 텍스트 색상 */
+  .evaluation-modal-content * {
+    color: #000 !important;
+  }
+
+  /* 배경 제거 */
+  .evaluation-modal-content * {
+    background: white !important;
+  }
+
+  /* 차트 배경 */
+  .evaluation-modal-chart * {
+    background: white !important;
+  }
+}

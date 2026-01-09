@@ -55,6 +55,11 @@ const getChartTitle = (exerciseType: string): string => {
 export default function EvaluationModal({ results = [], selectedExerciseTypes = [], member, measurementData, onClose }: EvaluationModalProps) {
   const genderText = member?.gender === "male" ? "남성" : member?.gender === "female" ? "여성" : "";
 
+  // 인쇄 함수
+  const handlePrint = () => {
+    window.print();
+  };
+
   // 선택한 운동 타입별로 결과 필터링
   const getChartDataByType = (exerciseType: string): MeasurementResult[] => {
     if (!results || results.length === 0) return [];
@@ -133,22 +138,27 @@ export default function EvaluationModal({ results = [], selectedExerciseTypes = 
   }, [results, measurementData, member?.notes]);
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-xl shadow-2xl w-full max-w-7xl h-[90vh] flex flex-col overflow-hidden">
+    <div className="evaluation-modal-overlay fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <div className="evaluation-modal-container bg-white rounded-xl shadow-2xl w-full max-w-7xl h-[90vh] flex flex-col overflow-hidden">
         {/* 헤더 - 고정 */}
-        <div className="flex-shrink-0 bg-white border-b border-gray-200 px-6 py-4 flex justify-between items-center">
+        <div className="evaluation-modal-header flex-shrink-0 bg-white border-b border-gray-200 px-6 py-4 flex justify-between items-center">
           <h2 className="text-2xl font-bold text-gray-800">📊 측정 결과</h2>
-          <button onClick={onClose} className="text-gray-500 hover:text-gray-700 text-2xl font-bold w-8 h-8 flex items-center justify-center">
-            ×
-          </button>
+          <div className="flex gap-2">
+            <button onClick={handlePrint} className="no-print px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors text-sm font-medium">
+              🖨️ 인쇄
+            </button>
+            <button onClick={onClose} className="no-print text-gray-500 hover:text-gray-700 text-2xl font-bold w-8 h-8 flex items-center justify-center">
+              ×
+            </button>
+          </div>
         </div>
 
         {/* 메인 콘텐츠 - 스크롤 없이 고정 높이 */}
-        <div className="flex-1 p-6 overflow-hidden flex gap-4">
+        <div className="print-area evaluation-modal-content flex-1 p-6 overflow-hidden flex gap-4">
           {/* 좌측 영역: 차트와 레벨 기준표 */}
-          <div className="flex-1 flex flex-col overflow-hidden">
+          <div className="evaluation-modal-left flex-1 flex flex-col overflow-hidden">
             {/* 상단 영역: 차트 */}
-            <div className="flex-shrink-0 mb-4" style={{ height: "420px" }}>
+            <div className="evaluation-modal-chart flex-shrink-0 mb-4" style={{ height: "420px" }}>
               {selectedExerciseTypes.length > 0 ? (
                 <div
                   className="grid gap-4 h-full"
@@ -177,7 +187,7 @@ export default function EvaluationModal({ results = [], selectedExerciseTypes = 
 
             {/* 하단 영역: 레벨 도달 기준표 */}
             <div className="flex-1 min-h-0">
-              <div className="bg-white border border-gray-200 rounded-lg p-4 overflow-hidden flex flex-col h-full">
+              <div className="evaluation-modal-table-container bg-white border border-gray-200 rounded-lg p-4 overflow-hidden flex flex-col h-full">
                 <div className="flex items-center gap-3 mb-3">
                   <h3 className="text-lg font-bold text-gray-800">레벨 도달 기준표</h3>
                   {member && (
@@ -188,7 +198,7 @@ export default function EvaluationModal({ results = [], selectedExerciseTypes = 
                 </div>
                 <div className="flex-1 overflow-auto">
                   <div className="overflow-x-auto">
-                    <table className="w-full text-sm border-collapse">
+                    <table className="evaluation-modal-table w-full text-sm border-collapse">
                       <thead>
                         <tr className="bg-gray-50 border-b-2 border-gray-300 sticky top-0">
                           <th className="px-3 py-2 text-left font-semibold text-gray-700">종목</th>
@@ -227,10 +237,10 @@ export default function EvaluationModal({ results = [], selectedExerciseTypes = 
           </div>
 
           {/* 우측 영역: 회원정보와 문제점 */}
-          <div className="w-80 flex-shrink-0 flex flex-col gap-4">
+          <div className="evaluation-modal-right w-80 flex-shrink-0 flex flex-col gap-4">
             {/* 회원정보 카드 */}
             {member && (
-              <div className="bg-white border border-gray-200 rounded-lg p-4">
+              <div className="evaluation-modal-card bg-white border border-gray-200 rounded-lg p-4">
                 <h3 className="text-lg font-bold text-gray-800 mb-4">👤 회원정보</h3>
                 <div className="space-y-2 text-sm">
                   <div className="flex justify-between">
@@ -265,7 +275,7 @@ export default function EvaluationModal({ results = [], selectedExerciseTypes = 
 
             {/* 문제점 카드 */}
             {allIssues.length > 0 && (
-              <div className="bg-white border border-gray-200 rounded-lg p-4 flex-1 min-h-0 flex flex-col">
+              <div className="evaluation-modal-card bg-white border border-gray-200 rounded-lg p-4 flex-1 min-h-0 flex flex-col">
                 <h3 className="text-lg font-bold text-gray-800 mb-4">⚠️ 발견된 문제점</h3>
                 <div className="flex-1 overflow-auto space-y-4">
                   {allIssues.map((item, index) => (
@@ -285,7 +295,7 @@ export default function EvaluationModal({ results = [], selectedExerciseTypes = 
               </div>
             )}
             {allIssues.length === 0 && (
-              <div className="bg-white border border-gray-200 rounded-lg p-4 flex-1 min-h-0 flex flex-col">
+              <div className="evaluation-modal-card bg-white border border-gray-200 rounded-lg p-4 flex-1 min-h-0 flex flex-col">
                 <h3 className="text-lg font-bold text-gray-800 mb-4">⚠️ 발견된 문제점</h3>
                 <div className="flex-1 flex items-center justify-center text-gray-500 text-sm">발견된 문제점이 없습니다.</div>
               </div>

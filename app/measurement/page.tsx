@@ -6,7 +6,7 @@ import { useMeasurementStore } from "@/store/measurementStore";
 import { useAuthStore } from "@/store/authStore";
 import { useRouter } from "next/navigation";
 import { calculateMeasurementsApi, MeasurementResult, CalculateMeasurementsResponse } from "@/lib/api";
-import { convertFormDataToMeasurement, convertMeasurementToApiRequest } from "@/lib/measurementUtils";
+import { convertFormDataToMeasurement, convertMeasurementToApiRequest, convertFlexibilityToChartData } from "@/lib/measurementUtils";
 import { ExerciseType, BaseSection } from "@/types/exercise";
 import { weightTrainingSections } from "./WeightTrainingSection";
 import WeightTrainingSection from "./WeightTrainingSection";
@@ -230,8 +230,8 @@ export default function MeasurementPage() {
     const measurementData = convertFormDataToMeasurement(formData, selectedMemberId, selectedMember.name, selectedExerciseTypes);
 
     try {
-      // API 호출을 위한 측정 데이터 변환
-      const measurements = convertMeasurementToApiRequest(measurementData);
+      // API 호출을 위한 측정 데이터 변환 (유연성 제외, 선택한 운동 타입만 포함)
+      const measurements = convertMeasurementToApiRequest(measurementData, selectedExerciseTypes);
 
       // API 호출
       let apiResponse: CalculateMeasurementsResponse | null = null;
@@ -280,13 +280,34 @@ export default function MeasurementPage() {
       addMeasurement(measurementData);
 
       // 백엔드 응답 결과 저장 (API 응답이 있으면 사용, 없으면 빈 배열)
-      const results = apiResponse?.data?.results || [];
-      setApiResponseResults(results);
+      const apiResults = apiResponse?.data?.results || [];
+
+      // 유연성 데이터를 차트용 형식으로 변환 (로컬에서만 사용, 백엔드로 전송하지 않음)
+      const flexibilityResults: MeasurementResult[] = selectedExerciseTypes.includes("flexibility")
+        ? convertFlexibilityToChartData(measurementData).map((flex) => ({
+            categoryId: flex.categoryId,
+            exerciseName: flex.exerciseName,
+            value: flex.value,
+            unit: flex.unit,
+            score: flex.score,
+            adjustedLevels: {
+              beginner: 1,
+              novice: 2,
+              intermediate: 3,
+              advanced: 4,
+              elite: 5,
+            },
+          }))
+        : [];
+
+      // API 결과와 유연성 결과 합치기
+      const allResults = [...apiResults, ...flexibilityResults];
+      setApiResponseResults(allResults);
       setIsSubmitting(false);
       setShowMeasurementForm(false);
 
       // 결과가 있으면 모달 표시, 없으면 성공 메시지만 표시
-      if (results.length > 0) {
+      if (allResults.length > 0) {
         setShowEvaluation(true);
       } else {
         setShowSuccess(true);
@@ -299,13 +320,38 @@ export default function MeasurementPage() {
       // 예상치 못한 오류 발생 시에도 데이터 저장 후 성공 메시지 표시
       try {
         addMeasurement(measurementData);
-        setApiResponseResults([]);
+
+        // 유연성 데이터를 차트용 형식으로 변환 (에러 발생 시에도 표시)
+        const flexibilityResults: MeasurementResult[] = selectedExerciseTypes.includes("flexibility")
+          ? convertFlexibilityToChartData(measurementData).map((flex) => ({
+              categoryId: flex.categoryId,
+              exerciseName: flex.exerciseName,
+              value: flex.value,
+              unit: flex.unit,
+              score: flex.score,
+              adjustedLevels: {
+                beginner: 1,
+                novice: 2,
+                intermediate: 3,
+                advanced: 4,
+                elite: 5,
+              },
+            }))
+          : [];
+
+        setApiResponseResults(flexibilityResults);
         setIsSubmitting(false);
         setShowMeasurementForm(false);
-        setShowSuccess(true);
-        setTimeout(() => {
-          setShowSuccess(false);
-        }, 3000);
+
+        // 유연성 결과가 있으면 모달 표시, 없으면 성공 메시지만 표시
+        if (flexibilityResults.length > 0) {
+          setShowEvaluation(true);
+        } else {
+          setShowSuccess(true);
+          setTimeout(() => {
+            setShowSuccess(false);
+          }, 3000);
+        }
       } catch (fallbackError) {
         console.error("데이터 저장 실패:", fallbackError);
         setIsSubmitting(false);

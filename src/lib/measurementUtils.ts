@@ -83,71 +83,93 @@ export function convertFormDataToMeasurement(formData: FormData, selectedMemberI
   };
 }
 
-// 측정 데이터를 API 요청 형식으로 변환
-export function convertMeasurementToApiRequest(measurementData: any) {
+// 측정 데이터를 API 요청 형식으로 변환 (유연성 제외, 선택한 운동 타입만 포함)
+export function convertMeasurementToApiRequest(measurementData: any, selectedExerciseTypes: string[] = []) {
   const measurements: Array<{ categoryId: number; value: number }> = [];
 
-  // categoryId 매핑: 웨이트 트레이닝
-  // 1=벤치프레스, 3=숄더프레스, 4=바벨스쿼트, 6=바벨로우, 7=데드리프트
-  if (measurementData.benchKg) {
-    measurements.push({ categoryId: 1, value: measurementData.benchKg });
-  }
-  if (measurementData.shoulderKg) {
-    measurements.push({ categoryId: 3, value: measurementData.shoulderKg });
-  }
-  if (measurementData.squatKg) {
-    measurements.push({ categoryId: 4, value: measurementData.squatKg });
-  }
-  if (measurementData.barbellRowKg) {
-    measurements.push({ categoryId: 6, value: measurementData.barbellRowKg });
-  }
-  if (measurementData.deadliftKg) {
-    measurements.push({ categoryId: 7, value: measurementData.deadliftKg });
+  // 웨이트 트레이닝이 선택된 경우만 처리
+  if (selectedExerciseTypes.includes("weight")) {
+    // categoryId 매핑: 웨이트 트레이닝
+    // 1=벤치프레스, 3=숄더프레스, 4=바벨스쿼트, 6=바벨로우, 7=데드리프트
+    if (measurementData.benchKg) {
+      measurements.push({ categoryId: 1, value: measurementData.benchKg });
+    }
+    if (measurementData.shoulderKg) {
+      measurements.push({ categoryId: 3, value: measurementData.shoulderKg });
+    }
+    if (measurementData.squatKg) {
+      measurements.push({ categoryId: 4, value: measurementData.squatKg });
+    }
+    if (measurementData.barbellRowKg) {
+      measurements.push({ categoryId: 6, value: measurementData.barbellRowKg });
+    }
+    if (measurementData.deadliftKg) {
+      measurements.push({ categoryId: 7, value: measurementData.deadliftKg });
+    }
   }
 
-  // categoryId 매핑: 맨몸 운동
-  // 2=풀업, 5=윗몸일으키기, 8=푸쉬업, 9=스쿼트, 10=버피
-  if (measurementData.pullupReps) {
-    measurements.push({ categoryId: 2, value: measurementData.pullupReps });
+  // 맨몸 운동이 선택된 경우만 처리
+  if (selectedExerciseTypes.includes("bodyweight")) {
+    // categoryId 매핑: 맨몸 운동
+    // 2=풀업, 5=윗몸일으키기, 8=푸쉬업, 9=스쿼트, 10=버피
+    if (measurementData.pullupReps) {
+      measurements.push({ categoryId: 2, value: measurementData.pullupReps });
+    }
+    if (measurementData.situpReps) {
+      measurements.push({ categoryId: 5, value: measurementData.situpReps });
+    }
+    if (measurementData.pushupReps) {
+      measurements.push({ categoryId: 8, value: measurementData.pushupReps });
+    }
+    if (measurementData.bodyweightSquatReps) {
+      measurements.push({ categoryId: 9, value: measurementData.bodyweightSquatReps });
+    }
+    if (measurementData.burpeeReps) {
+      measurements.push({ categoryId: 10, value: measurementData.burpeeReps });
+    }
   }
-  if (measurementData.situpReps) {
-    measurements.push({ categoryId: 5, value: measurementData.situpReps });
-  }
-  if (measurementData.pushupReps) {
-    measurements.push({ categoryId: 8, value: measurementData.pushupReps });
-  }
-  if (measurementData.bodyweightSquatReps) {
-    measurements.push({ categoryId: 9, value: measurementData.bodyweightSquatReps });
-  }
-  if (measurementData.burpeeReps) {
-    measurements.push({ categoryId: 10, value: measurementData.burpeeReps });
-  }
+
+  // 유연성은 백엔드로 전송하지 않음 (DB에 저장되지 않음, 차트에만 표시)
+
+  return measurements;
+}
+
+// 유연성 데이터를 차트용 MeasurementResult 형식으로 변환 (로컬에서만 사용)
+export function convertFlexibilityToChartData(measurementData: any): Array<{ categoryId: number; exerciseName: string; value: number; unit: string; score: number }> {
+  const results: Array<{ categoryId: number; exerciseName: string; value: number; unit: string; score: number }> = [];
 
   // categoryId 매핑: 유연성
   // 11=흉추가동성, 12=어깨유연성, 13=햄스트링, 14=고관절, 15=발목가동성
-  const flexibilityMap: Record<string, number> = {
-    thoracicMobility: 11,
-    shoulderFlexibility: 12,
-    hamstring: 13,
-    hipMobility: 14,
-    ankleMobility: 15,
+  const flexibilityMap: Record<string, { categoryId: number; name: string }> = {
+    thoracicMobility: { categoryId: 11, name: "유연성 – 흉추 가동성" },
+    shoulderFlexibility: { categoryId: 12, name: "유연성 – 어깨 유연성" },
+    hamstring: { categoryId: 13, name: "유연성 – 햄스트링" },
+    hipMobility: { categoryId: 14, name: "유연성 – 고관절" },
+    ankleMobility: { categoryId: 15, name: "유연성 – 발목 가동성" },
   };
 
-  Object.entries(flexibilityMap).forEach(([field, categoryId]) => {
+  // 5단계 평가: excellent=5, good=4, normal=3, bad=2, very_bad=1
+  const scoreMap: Record<string, number> = {
+    excellent: 5,
+    good: 4,
+    normal: 3,
+    bad: 2,
+    very_bad: 1,
+  };
+
+  Object.entries(flexibilityMap).forEach(([field, { categoryId, name }]) => {
     const value = measurementData[field];
     if (value) {
-      // 5단계 평가: excellent=5, good=4, normal=3, bad=2, very_bad=1로 변환
-      const scoreMap: Record<string, number> = {
-        excellent: 5,
-        good: 4,
-        normal: 3,
-        bad: 2,
-        very_bad: 1,
-      };
-      const numericValue = scoreMap[value] || 3;
-      measurements.push({ categoryId, value: numericValue });
+      const score = scoreMap[value] || 3;
+      results.push({
+        categoryId,
+        exerciseName: name,
+        value: score,
+        unit: "level",
+        score,
+      });
     }
   });
 
-  return measurements;
+  return results;
 }

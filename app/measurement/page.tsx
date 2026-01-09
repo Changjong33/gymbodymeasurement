@@ -5,7 +5,7 @@ import { useMemberStore } from "@/store/memberStore";
 import { useMeasurementStore } from "@/store/measurementStore";
 import { useAuthStore } from "@/store/authStore";
 import { useRouter } from "next/navigation";
-import { calculateMeasurementsApi, MeasurementResult } from "@/lib/api";
+import { calculateMeasurementsApi, MeasurementResult, CalculateMeasurementsResponse } from "@/lib/api";
 import { convertFormDataToMeasurement, convertMeasurementToApiRequest } from "@/lib/measurementUtils";
 import { ExerciseType, BaseSection } from "@/types/exercise";
 import { weightTrainingSections } from "./WeightTrainingSection";
@@ -234,7 +234,7 @@ export default function MeasurementPage() {
       const measurements = convertMeasurementToApiRequest(measurementData);
 
       // API 호출
-      let apiResponse = null;
+      let apiResponse: CalculateMeasurementsResponse | null = null;
       if (measurements.length > 0) {
         // memberId를 숫자로 변환 (API가 숫자를 기대함)
         const memberIdNum = parseInt(selectedMemberId.replace(/\D/g, "")) || parseInt(selectedMemberId);
@@ -244,41 +244,47 @@ export default function MeasurementPage() {
             measurements,
           });
         } catch (apiError: any) {
-          // API 호출 실패 시 mock 데이터 생성
-          console.warn("측정 계산 API 호출 실패, mock 데이터 사용:", apiError?.response?.status || apiError?.message);
-          // member weight 정보를 measurementData에 추가
-          const measurementDataWithWeight = { ...measurementData, memberWeight: selectedMember.weight };
+          // API 호출 실패 시 에러 로그만 남기고 계속 진행
+          console.warn("측정 계산 API 호출 실패:", apiError?.response?.status || apiError?.message);
+          // API 응답이 없어도 결과를 표시할 수 있도록 빈 배열로 설정
+          apiResponse = null;
         }
-      } else {
-        // measurements가 비어있으면 mock 데이터 생성
-        const measurementDataWithWeight = { ...measurementData, memberWeight: selectedMember.weight };
       }
 
       // 로컬 스토어에 저장
       addMeasurement(measurementData);
 
-      // 백엔드 응답 결과 저장
+      // 백엔드 응답 결과 저장 (API 응답이 있으면 사용, 없으면 빈 배열)
       const results = apiResponse?.data?.results || [];
       setApiResponseResults(results);
       setIsSubmitting(false);
       setShowMeasurementForm(false);
-      setShowEvaluation(true);
+
+      // 결과가 있으면 모달 표시, 없으면 성공 메시지만 표시
+      if (results.length > 0) {
+        setShowEvaluation(true);
+      } else {
+        setShowSuccess(true);
+        setTimeout(() => {
+          setShowSuccess(false);
+        }, 3000);
+      }
     } catch (error: any) {
       console.error("측정 데이터 처리 중 오류:", error);
-      // 예상치 못한 오류 발생 시에도 mock 데이터로 처리
+      // 예상치 못한 오류 발생 시에도 데이터 저장 후 성공 메시지 표시
       try {
-        const measurementDataWithWeight = { ...measurementData, memberWeight: selectedMember.weight };
-        addMeasurement(measurementData);
-        setIsSubmitting(false);
-        setShowMeasurementForm(false);
-        setShowEvaluation(true);
-      } catch (fallbackError) {
-        console.error("Mock 데이터 생성 실패:", fallbackError);
         addMeasurement(measurementData);
         setApiResponseResults([]);
         setIsSubmitting(false);
         setShowMeasurementForm(false);
-        setShowEvaluation(true);
+        setShowSuccess(true);
+        setTimeout(() => {
+          setShowSuccess(false);
+        }, 3000);
+      } catch (fallbackError) {
+        console.error("데이터 저장 실패:", fallbackError);
+        setIsSubmitting(false);
+        alert("측정 데이터 저장 중 오류가 발생했습니다. 다시 시도해주세요.");
       }
     }
   };
@@ -449,7 +455,7 @@ export default function MeasurementPage() {
       </div>
 
       {/* 측정 결과 모달 */}
-      {showEvaluation && selectedMember && apiResponseResults.length > 0 && (
+      {showEvaluation && selectedMember && (
         <EvaluationModal
           results={apiResponseResults}
           selectedExerciseTypes={selectedExerciseTypes}

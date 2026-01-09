@@ -35,6 +35,20 @@ export default function ListPage() {
   const [isLoadingHistory, setIsLoadingHistory] = useState(false);
   const [historyError, setHistoryError] = useState<string | null>(null);
 
+  // [5] null-safe 처리: 검색어에 따라 회원 필터링 (모든 Hook은 early return 전에 선언)
+  const filteredMembers = useMemo(() => {
+    if (!members || !Array.isArray(members)) {
+      return [];
+    }
+    if (!searchQuery) {
+      return members;
+    }
+    return members.filter((member) => {
+      if (!member || !member.name) return false;
+      return member.name.toLowerCase().includes(searchQuery.toLowerCase());
+    });
+  }, [members, searchQuery]);
+
   // [2] mounted 패턴 강제 적용
   useEffect(() => {
     console.log("=== ListPage 마운트 시작 ===");
@@ -68,25 +82,6 @@ export default function ListPage() {
     }
   }, []);
 
-  // [3] 서버 사이드 렌더링 시 아무것도 렌더링하지 않음
-  if (!mounted || typeof window === "undefined") {
-    return null;
-  }
-
-  // [5] null-safe 처리: 검색어에 따라 회원 필터링
-  const filteredMembers = useMemo(() => {
-    if (!members || !Array.isArray(members)) {
-      return [];
-    }
-    if (!searchQuery) {
-      return members;
-    }
-    return members.filter((member) => {
-      if (!member || !member.name) return false;
-      return member.name.toLowerCase().includes(searchQuery.toLowerCase());
-    });
-  }, [members, searchQuery]);
-
   // 로그인 체크 (개발 모드에서는 우회)
   useEffect(() => {
     if (!mounted) return;
@@ -101,6 +96,11 @@ export default function ListPage() {
       router.push("/login");
     }
   }, [mounted, isLoggedIn, devMode, router]);
+
+  // [3] 서버 사이드 렌더링 시 아무것도 렌더링하지 않음 (모든 Hook 선언 후)
+  if (!mounted || typeof window === "undefined") {
+    return null;
+  }
 
   // [4] 회원 목록 조회 함수 - API 호출 전 필수 값 체크 강화
   const fetchMembers = async () => {

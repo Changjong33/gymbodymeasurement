@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, FormEvent, useEffect } from "react";
+import { useState, FormEvent, useEffect, useMemo } from "react";
 import { useMemberStore, Member } from "@/store/memberStore";
 import { useAuthStore } from "@/store/authStore";
 import { useRouter } from "next/navigation";
@@ -11,7 +11,14 @@ export default function ListPage() {
   const router = useRouter();
   const { getEffectiveAuth, isDevMode } = useAuthStore();
   const { members, removeMember, updateMember, setMembers } = useMemberStore();
+
+  // [1] mounted 패턴 강제 적용
   const [mounted, setMounted] = useState(false);
+  const [accessToken, setAccessToken] = useState<string | null>(null);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [devMode, setDevMode] = useState(false);
+  const [gymId, setGymId] = useState<number | null>(null);
+
   const [editingMember, setEditingMember] = useState<Member | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [injuries, setInjuries] = useState<string[]>([]);
@@ -27,87 +34,119 @@ export default function ListPage() {
   const [showHistoryModal, setShowHistoryModal] = useState(false);
   const [isLoadingHistory, setIsLoadingHistory] = useState(false);
   const [historyError, setHistoryError] = useState<string | null>(null);
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [devMode, setDevMode] = useState(false);
 
-  // Hydration 에러 방지: mounted 패턴
+  // [2] mounted 패턴 강제 적용
   useEffect(() => {
+    console.log("=== ListPage 마운트 시작 ===");
     setMounted(true);
 
     // mounted 후에만 인증 상태 확인
-    try {
-      const auth = getEffectiveAuth();
-      setIsLoggedIn(auth.isLoggedIn);
-      setDevMode(isDevMode());
-    } catch (error) {
-      console.error("인증 상태 확인 실패:", error);
-      setIsLoggedIn(false);
-      setDevMode(false);
+    if (typeof window !== "undefined") {
+      try {
+        const token = sessionStorage.getItem("accessToken");
+        console.log("mounted:", true);
+        console.log("accessToken:", token ? token.substring(0, 20) + "..." : "없음");
+
+        setAccessToken(token);
+
+        const auth = getEffectiveAuth();
+        const currentDevMode = isDevMode();
+
+        console.log("isLoggedIn:", auth.isLoggedIn);
+        console.log("devMode:", currentDevMode);
+        console.log("gymId:", auth.gymId);
+
+        setIsLoggedIn(auth.isLoggedIn);
+        setDevMode(currentDevMode);
+        setGymId(auth.gymId);
+      } catch (error) {
+        console.error("인증 상태 확인 실패:", error);
+        setIsLoggedIn(false);
+        setDevMode(false);
+        setGymId(null);
+      }
     }
   }, []);
 
-  // 서버 사이드 렌더링 시 아무것도 렌더링하지 않음
+  // [3] 서버 사이드 렌더링 시 아무것도 렌더링하지 않음
   if (!mounted || typeof window === "undefined") {
     return null;
   }
 
-  // 검색어에 따라 회원 필터링 (mounted 후에만 실행)
-  const filteredMembers = members.filter((member) => member.name.toLowerCase().includes(searchQuery.toLowerCase()));
+  // [5] null-safe 처리: 검색어에 따라 회원 필터링
+  const filteredMembers = useMemo(() => {
+    if (!members || !Array.isArray(members)) {
+      return [];
+    }
+    if (!searchQuery) {
+      return members;
+    }
+    return members.filter((member) => {
+      if (!member || !member.name) return false;
+      return member.name.toLowerCase().includes(searchQuery.toLowerCase());
+    });
+  }, [members, searchQuery]);
 
   // 로그인 체크 (개발 모드에서는 우회)
   useEffect(() => {
     if (!mounted) return;
+
     try {
-      const auth = getEffectiveAuth();
-      const currentDevMode = isDevMode();
-      if (!auth.isLoggedIn && !currentDevMode) {
+      if (!isLoggedIn && !devMode) {
+        console.log("로그인되지 않음 → 로그인 페이지로 이동");
         router.push("/login");
       }
     } catch (error) {
       console.error("로그인 체크 실패:", error);
       router.push("/login");
     }
-  }, [mounted, router]);
+  }, [mounted, isLoggedIn, devMode, router]);
 
-  // 회원 목록 조회 함수
+  // [4] 회원 목록 조회 함수 - API 호출 전 필수 값 체크 강화
   const fetchMembers = async () => {
     // 클라이언트 사이드에서만 실행
-    if (typeof window === "undefined" || !mounted) return;
+    if (typeof window === "undefined" || !mounted) {
+      console.warn("fetchMembers: 클라이언트 사이드가 아니거나 mounted되지 않음");
+      return;
+    }
+
+    // [4] 필수 값 체크 - early return
+    if (!accessToken && !devMode) {
+      console.warn("accessToken 없음 → API 호출 중단");
+      console.log("accessToken:", accessToken);
+      console.log("devMode:", devMode);
+      setMembers([]);
+      return;
+    }
+
+    if (!gymId && !devMode) {
+      console.warn("gymId 없음 → API 호출 중단");
+      console.log("gymId:", gymId);
+      console.log("devMode:", devMode);
+      setMembers([]);
+      return;
+    }
+
+    if (!isLoggedIn && !devMode) {
+      console.warn("로그인되지 않음 → API 호출 중단");
+      console.log("isLoggedIn:", isLoggedIn);
+      console.log("devMode:", devMode);
+      return;
+    }
+
+    console.log("=== 회원 목록 조회 시작 ===");
+    console.log("mounted:", mounted);
+    console.log("accessToken:", accessToken ? accessToken.substring(0, 20) + "..." : "없음");
+    console.log("gymId:", gymId);
+    console.log("isLoggedIn:", isLoggedIn);
+    console.log("devMode:", devMode);
+
+    setIsLoading(true);
 
     try {
-      // 인증 상태 다시 확인
-      const auth = getEffectiveAuth();
-      const currentDevMode = isDevMode();
-
-      if (!auth.isLoggedIn && !currentDevMode) {
-        return;
-      }
-
-      setIsLoading(true);
-
-      // accessToken 체크
-      const accessToken = sessionStorage.getItem("accessToken");
-      if (!accessToken && !currentDevMode) {
-        console.warn("accessToken 없음 → 회원 목록 조회 중단");
-        setMembers([]);
-        setIsLoading(false);
-        return;
-      }
-
-      // 로그인한 계정의 gymId 가져오기
-      const authGymId = auth.gymId;
-
-      // gymId가 없으면 회원 조회 불가
-      if (!authGymId && !currentDevMode) {
-        console.error("gymId가 없습니다. 로그인 상태를 확인해주세요.");
-        setMembers([]);
-        setIsLoading(false);
-        return;
-      }
-
       // gymId는 JWT 토큰에서 서버가 자동으로 추출하므로 파라미터로 전달하지 않음
+      console.log("GET /members API 호출 시작");
       const response = await getMembersApi();
-
       console.log("회원 목록 조회 응답:", response);
 
       // 응답 구조에 따라 배열 추출
@@ -128,34 +167,41 @@ export default function ListPage() {
 
       // 백엔드 응답을 프론트엔드 Member 형식으로 변환
       if (Array.isArray(membersArray)) {
-        const convertedMembers: Member[] = membersArray.map((member: any) => {
-          // height와 weight가 문자열일 수 있으므로 숫자로 변환
-          const height = typeof member.height === "string" ? parseFloat(member.height) : member.height || 0;
-          const weight = typeof member.weight === "string" ? parseFloat(member.weight) : member.weight || 0;
+        const convertedMembers: Member[] = membersArray
+          .filter((member: any) => member != null) // null/undefined 필터링
+          .map((member: any) => {
+            // [5] null-safe 처리
+            const height = member?.height != null ? (typeof member.height === "string" ? parseFloat(member.height) : member.height) || 0 : 0;
+            const weight = member?.weight != null ? (typeof member.weight === "string" ? parseFloat(member.weight) : member.weight) || 0 : 0;
 
-          // createdAt 처리 (mounted 후에만 Date 객체 사용)
-          let createdAt: string;
-          if (member.createdAt) {
-            if (typeof member.createdAt === "string") {
-              createdAt = member.createdAt;
+            // createdAt 처리 (mounted 후에만 Date 객체 사용)
+            let createdAt: string;
+            if (member?.createdAt) {
+              if (typeof member.createdAt === "string") {
+                createdAt = member.createdAt;
+              } else {
+                try {
+                  createdAt = new Date(member.createdAt).toISOString();
+                } catch {
+                  createdAt = new Date().toISOString();
+                }
+              }
             } else {
-              createdAt = new Date(member.createdAt).toISOString();
+              createdAt = new Date().toISOString();
             }
-          } else {
-            createdAt = new Date().toISOString();
-          }
 
-          return {
-            id: member.id?.toString() || `member_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-            name: member.name || "",
-            gender: member.gender === "M" ? "male" : "female",
-            age: typeof member.age === "number" ? member.age : parseInt(member.age || "0", 10),
-            height: height,
-            weight: weight,
-            notes: member.notes || undefined,
-            createdAt: createdAt,
-          };
-        });
+            return {
+              id: member?.id?.toString() || `member_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+              name: member?.name || "",
+              gender: member?.gender === "M" ? "male" : "female",
+              age: member?.age != null ? (typeof member.age === "number" ? member.age : parseInt(String(member.age) || "0", 10)) : 0,
+              height: height,
+              weight: weight,
+              notes: member?.notes || undefined,
+              createdAt: createdAt,
+            };
+          });
+        console.log("변환된 회원 수:", convertedMembers.length);
         setMembers(convertedMembers);
       } else {
         console.warn("회원 목록이 배열이 아닙니다:", response);
@@ -175,37 +221,38 @@ export default function ListPage() {
     }
   };
 
-  // 회원 목록 조회 (mounted 후에만 실행)
+  // [3] 회원 목록 조회 (mounted + accessToken + gymId 준비되기 전엔 절대 API 호출 금지)
   useEffect(() => {
-    if (!mounted) return;
-
-    // 인증 상태 확인 후 API 호출
-    try {
-      const auth = getEffectiveAuth();
-      const currentDevMode = isDevMode();
-
-      if (auth.isLoggedIn || currentDevMode) {
-        fetchMembers();
-      }
-    } catch (error) {
-      console.error("회원 목록 조회 초기화 실패:", error);
+    if (!mounted) {
+      console.log("회원 목록 조회: mounted되지 않음");
+      return;
     }
+
+    // [4] 필수 값 체크
+    if (!accessToken && !devMode) {
+      console.log("회원 목록 조회: accessToken 없음");
+      return;
+    }
+
+    if (!gymId && !devMode) {
+      console.log("회원 목록 조회: gymId 없음");
+      return;
+    }
+
+    if (!isLoggedIn && !devMode) {
+      console.log("회원 목록 조회: 로그인되지 않음");
+      return;
+    }
+
+    console.log("회원 목록 조회 조건 충족 → API 호출");
+    fetchMembers();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [mounted]);
+  }, [mounted, accessToken, gymId, isLoggedIn, devMode]);
 
   // 로그인하지 않은 경우 아무것도 렌더링하지 않음 (개발 모드 제외)
   // mounted 체크 후에만 실행
-  if (mounted) {
-    try {
-      const auth = getEffectiveAuth();
-      const currentDevMode = isDevMode();
-      if (!auth.isLoggedIn && !currentDevMode) {
-        return null;
-      }
-    } catch (error) {
-      console.error("인증 상태 확인 실패:", error);
-      return null;
-    }
+  if (mounted && !isLoggedIn && !devMode) {
+    return null;
   }
 
   const handleDelete = async (id: string, name: string) => {
@@ -535,7 +582,7 @@ export default function ListPage() {
             <h2 className="text-2xl font-semibold text-gray-700 mb-2">회원 정보를 불러오는 중...</h2>
           </div>
         </div>
-      ) : members.length === 0 ? (
+      ) : !members || !Array.isArray(members) || members.length === 0 ? (
         <div className="bg-white rounded-xl shadow-lg border border-gray-200 p-8">
           <div className="text-center py-12">
             <div className="w-24 h-24 bg-gradient-to-br from-purple-100 to-purple-200 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -550,8 +597,8 @@ export default function ListPage() {
           <div className="mb-4 flex items-center justify-between gap-4 flex-wrap">
             <div className="flex items-center gap-4 flex-1 min-w-[300px]">
               <h2 className="text-xl font-semibold text-gray-700 whitespace-nowrap">
-                총 {filteredMembers.length}명의 회원
-                {searchQuery && ` (검색 결과: ${filteredMembers.length}명)`}
+                총 {filteredMembers?.length || 0}명의 회원
+                {searchQuery && ` (검색 결과: ${filteredMembers?.length || 0}명)`}
               </h2>
               <div className="flex-1 max-w-md">
                 <div className="relative">
@@ -590,41 +637,55 @@ export default function ListPage() {
                 </tr>
               </thead>
               <tbody>
-                {filteredMembers.length === 0 ? (
+                {!filteredMembers || filteredMembers.length === 0 ? (
                   <tr>
                     <td colSpan={7} className="py-8 text-center text-gray-500">
                       검색 결과가 없습니다.
                     </td>
                   </tr>
                 ) : (
-                  filteredMembers.map((member) => (
-                    <tr key={member.id} className="border-b border-gray-100 hover:bg-gray-50">
-                      <td className="py-3 px-4 text-gray-700 font-medium">{member.name}</td>
-                      <td className="py-3 px-4 text-gray-600">{member.gender === "male" ? "남" : "여"}</td>
-                      <td className="py-3 px-4 text-gray-600">{member.age}세</td>
-                      <td className="py-3 px-4 text-gray-600">{member.height}cm</td>
-                      <td className="py-3 px-4 text-gray-600">{member.weight}kg</td>
-                      <td className="py-3 px-4 text-gray-600 text-sm max-w-[200px]">
-                        <div className="truncate" title={member.notes || "-"}>
-                          {member.notes || "-"}
-                        </div>
-                      </td>
-                      <td className="py-3 px-4 text-gray-500 text-sm">{mounted && typeof window !== "undefined" ? new Date(member.createdAt).toLocaleDateString("ko-KR") : member.createdAt}</td>
-                      <td className="py-3 px-4">
-                        <div className="flex items-center gap-3">
-                          <button onClick={() => handleViewHistory(member)} className="text-green-500 hover:text-green-700 font-medium text-sm">
-                            측정이력
-                          </button>
-                          <button onClick={() => handleEdit(member)} className="text-blue-500 hover:text-blue-700 font-medium text-sm">
-                            수정
-                          </button>
-                          <button onClick={() => handleDelete(member.id, member.name)} className="text-red-500 hover:text-red-700 font-medium text-sm">
-                            삭제
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))
+                  filteredMembers.map((member) => {
+                    // [5] null-safe 처리
+                    if (!member) return null;
+                    return (
+                      <tr key={member.id} className="border-b border-gray-100 hover:bg-gray-50">
+                        <td className="py-3 px-4 text-gray-700 font-medium">{member?.name || "-"}</td>
+                        <td className="py-3 px-4 text-gray-600">{member?.gender === "male" ? "남" : "여"}</td>
+                        <td className="py-3 px-4 text-gray-600">{member?.age || 0}세</td>
+                        <td className="py-3 px-4 text-gray-600">{member?.height || 0}cm</td>
+                        <td className="py-3 px-4 text-gray-600">{member?.weight || 0}kg</td>
+                        <td className="py-3 px-4 text-gray-600 text-sm max-w-[200px]">
+                          <div className="truncate" title={member?.notes || "-"}>
+                            {member?.notes || "-"}
+                          </div>
+                        </td>
+                        <td className="py-3 px-4 text-gray-500 text-sm">
+                          {mounted && typeof window !== "undefined" && member?.createdAt
+                            ? (() => {
+                                try {
+                                  return new Date(member.createdAt).toLocaleDateString("ko-KR");
+                                } catch {
+                                  return member.createdAt;
+                                }
+                              })()
+                            : member?.createdAt || "-"}
+                        </td>
+                        <td className="py-3 px-4">
+                          <div className="flex items-center gap-3">
+                            <button onClick={() => member && handleViewHistory(member)} className="text-green-500 hover:text-green-700 font-medium text-sm" disabled={!member}>
+                              측정이력
+                            </button>
+                            <button onClick={() => member && handleEdit(member)} className="text-blue-500 hover:text-blue-700 font-medium text-sm" disabled={!member}>
+                              수정
+                            </button>
+                            <button onClick={() => member && handleDelete(member.id, member.name || "")} className="text-red-500 hover:text-red-700 font-medium text-sm" disabled={!member}>
+                              삭제
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })
                 )}
               </tbody>
             </table>

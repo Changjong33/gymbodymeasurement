@@ -21,15 +21,24 @@ api.interceptors.request.use(
   (config) => {
     // 클라이언트 사이드에서만 실행
     if (typeof window !== "undefined") {
-      // sessionStorage에서 토큰 가져오기 (로그인 시 sessionStorage에 저장됨)
-      const token = sessionStorage.getItem("accessToken");
-      if (token) {
-        config.headers.Authorization = `Bearer ${token}`;
-        devLog("토큰 추가됨:", token.substring(0, 20) + "...");
+      // 인증이 필요 없는 경로 목록 (로그인, 회원가입, 토큰 갱신)
+      const publicPaths = ["/auth/login", "/auth/signup", "/auth/refresh"];
+      const isPublicPath = publicPaths.some((path) => config.url?.includes(path));
+
+      // 공개 경로가 아니면 토큰 체크
+      if (!isPublicPath) {
+        const token = sessionStorage.getItem("accessToken");
+        if (token) {
+          config.headers.Authorization = `Bearer ${token}`;
+          devLog("토큰 추가됨:", token.substring(0, 20) + "...");
+        } else {
+          devError("토큰이 없습니다! (sessionStorage 확인)");
+          // 토큰이 없으면 요청 자체를 취소
+          return Promise.reject(new Error("accessToken이 없습니다. 로그인이 필요합니다."));
+        }
       } else {
-        devError("토큰이 없습니다! (sessionStorage 확인)");
-        // 토큰이 없으면 요청 자체를 취소
-        return Promise.reject(new Error("accessToken이 없습니다. 로그인이 필요합니다."));
+        // 공개 경로는 토큰 없이 요청 진행
+        devLog("공개 경로 요청 (토큰 불필요):", config.url);
       }
     }
     return config;

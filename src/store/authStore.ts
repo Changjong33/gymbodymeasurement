@@ -49,8 +49,7 @@ export const useAuthStore = create<AuthState>()(
       email: null,
       token: null,
       gymId: null,
-      login: (ownerName: string, email: string, token?: string, gymId?: number) => 
-        set({ isLoggedIn: true, ownerName, email, token: token || null, gymId: gymId || null }),
+      login: (ownerName: string, email: string, token?: string, gymId?: number) => set({ isLoggedIn: true, ownerName, email, token: token || null, gymId: gymId || null }),
       logout: () => {
         set({ isLoggedIn: false, ownerName: null, email: null, token: null, gymId: null });
         // sessionStorage에서 인증 정보 제거
@@ -89,7 +88,23 @@ export const useAuthStore = create<AuthState>()(
     }),
     {
       name: "auth-storage",
-      storage: sessionStorageAdapter,
+      storage: {
+        getItem: async (name) => {
+          const value = sessionStorage.getItem(name);
+          if (!value) return null;
+          try {
+            return JSON.parse(value);
+          } catch {
+            return null;
+          }
+        },
+        setItem: async (name, value) => {
+          sessionStorage.setItem(name, JSON.stringify(value));
+        },
+        removeItem: async (name) => {
+          sessionStorage.removeItem(name);
+        },
+      },
     }
   )
 );

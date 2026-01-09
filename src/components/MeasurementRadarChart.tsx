@@ -149,12 +149,12 @@ const convertResultsToRadarData = (results?: MeasurementResult[], exerciseType?:
 
   // 부위별 점수 및 실제 데이터 그룹화 (동적으로 생성)
   const bodyPartScores: Record<string, number[]> = {};
-  const bodyPartData: Record<string, { exerciseName: string; value: number; unit: string; score: number }> = {};
+  const bodyPartData: Record<string, { exerciseName: string; value: number; unit: string; score: number; nextLevelTarget?: number; remaining?: number }> = {};
 
   // labels에 따라 초기화
   labels.forEach((label) => {
     bodyPartScores[label] = [];
-    bodyPartData[label] = { exerciseName: "", value: 0, unit: "", score: 0 };
+    bodyPartData[label] = { exerciseName: "", value: 0, unit: "", score: 0, nextLevelTarget: undefined, remaining: undefined };
   });
 
   // 우선순위: 각 부위별로 대표 운동 선택 (운동 타입별)
@@ -223,6 +223,8 @@ const convertResultsToRadarData = (results?: MeasurementResult[], exerciseType?:
               value: result.value,
               unit: result.unit,
               score: result.score,
+              nextLevelTarget: result.nextLevelTarget,
+              remaining: result.remaining,
             };
           }
         } else if (!bodyPartData[bodyPart].exerciseName) {
@@ -232,6 +234,8 @@ const convertResultsToRadarData = (results?: MeasurementResult[], exerciseType?:
             value: result.value,
             unit: result.unit,
             score: result.score,
+            nextLevelTarget: result.nextLevelTarget,
+            remaining: result.remaining,
           };
         }
       }
@@ -343,33 +347,38 @@ export default function MeasurementRadarChart({ results, title, showDataLabels =
               // 맨몸운동 차트의 경우 3줄 형식으로 표시
               const isBodyweight = exerciseType === "bodyweight";
               if (isBodyweight) {
+                const unitText = dataInfo.unit === "reps" ? "회" : dataInfo.unit === "kg" ? "kg" : "";
                 return (
                   <div key={bodyPart} className="text-center">
-                    <div className="font-medium text-gray-700">{bodyPart}</div>
-                    <div className="text-gray-600">{dataInfo.exerciseName}</div>
+                    <div className="font-medium text-gray-700">{dataInfo.exerciseName}</div>
                     <div className="text-gray-600">
                       {dataInfo.value}
-                      {dataInfo.unit === "reps" ? "회" : dataInfo.unit === "kg" ? "kg" : ""}
+                      {unitText}
                     </div>
+                    {dataInfo.nextLevelTarget !== undefined && dataInfo.nextLevelTarget > 0 && (
+                      <div className="text-xs text-gray-500 mt-1">
+                        다음 단계: {dataInfo.nextLevelTarget}
+                        {unitText} {dataInfo.remaining !== undefined && dataInfo.remaining > 0 && `(${dataInfo.remaining}${unitText} 남음)`}
+                      </div>
+                    )}
                   </div>
                 );
               }
               // 웨이트 운동 차트 형식
+              const unitText = dataInfo.unit === "reps" ? "회" : dataInfo.unit === "kg" ? "kg" : "";
               return (
                 <div key={bodyPart} className="text-center">
-                  <div className="font-medium text-gray-700">{bodyPart}</div>
+                  <div className="font-medium text-gray-700">{dataInfo.exerciseName}</div>
                   <div className="text-gray-600">
-                    {dataInfo.exerciseName}
-                    {dataInfo.unit === "level" ? (
-                      <span className="ml-1">({dataInfo.value})</span>
-                    ) : (
-                      <>
-                        {" "}
-                        {dataInfo.value}
-                        {dataInfo.unit === "reps" ? "회" : dataInfo.unit === "kg" ? "kg" : ""}
-                      </>
-                    )}
+                    {dataInfo.value}
+                    {unitText}
                   </div>
+                  {dataInfo.nextLevelTarget !== undefined && dataInfo.nextLevelTarget > 0 && (
+                    <div className="text-xs text-gray-500 mt-1">
+                      다음 단계: {dataInfo.nextLevelTarget}
+                      {unitText} {dataInfo.remaining !== undefined && dataInfo.remaining > 0 && `(${dataInfo.remaining}${unitText} 남음)`}
+                    </div>
+                  )}
                 </div>
               );
             })}

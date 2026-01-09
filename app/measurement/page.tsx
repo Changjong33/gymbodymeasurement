@@ -5,7 +5,7 @@ import { useMemberStore } from "@/store/memberStore";
 import { useMeasurementStore } from "@/store/measurementStore";
 import { useAuthStore } from "@/store/authStore";
 import { useRouter } from "next/navigation";
-import { calculateMeasurementsApi } from "@/lib/api";
+import { calculateMeasurementsApi, CalculateMeasurementsResponse } from "@/lib/api";
 import { generateEvaluationFromApiResponse, generateEvaluation, generateMockMeasurementsResponse, EvaluationResult } from "@/lib/evaluationUtils";
 import { convertFormDataToMeasurement, convertMeasurementToApiRequest } from "@/lib/measurementUtils";
 import { ExerciseType, BaseSection } from "@/types/exercise";
@@ -32,6 +32,8 @@ export default function MeasurementPage() {
   const [showEvaluation, setShowEvaluation] = useState(false);
   const [evaluationResult, setEvaluationResult] = useState<EvaluationResult | null>(null);
   const [apiResponseResults, setApiResponseResults] = useState<any[]>([]);
+  const [apiResponseData, setApiResponseData] = useState<CalculateMeasurementsResponse | null>(null);
+  const [formValid, setFormValid] = useState(false);
 
   // 실제 인증 상태 가져오기 (개발 모드 우회 포함)
   const { isLoggedIn } = getEffectiveAuth();
@@ -119,11 +121,95 @@ export default function MeasurementPage() {
   const handleNext = () => {
     if (canProceed) {
       setShowMeasurementForm(true);
+      setFormValid(false); // 새 폼 시작 시 검증 상태 초기화
     }
   };
 
   const handleBack = () => {
     setShowMeasurementForm(false);
+    setFormValid(false); // 폼 닫을 때 검증 상태 초기화
+  };
+
+  // 폼 입력 값 변경 시 실시간 검증
+  const handleFormChange = (e: React.FormEvent<HTMLFormElement>) => {
+    // 이벤트 버블링으로 모든 input 변경 감지
+    const target = e.target as HTMLElement;
+    if (target.tagName === "INPUT" || target.tagName === "SELECT" || target.tagName === "TEXTAREA") {
+      const form = e.currentTarget;
+      const formData = new FormData(form);
+      setFormValid(validateRequiredFields(formData, false));
+    }
+  };
+
+  // 선택된 운동 타입에 따른 필수 필드 검증
+  const validateRequiredFields = (formData: FormData, showAlert = true): boolean => {
+    // 웨이트 트레이닝 필수 필드
+    const weightRequiredFields = [
+      { field: "squatKg", label: "바벨 스쿼트" },
+      { field: "benchKg", label: "벤치프레스" },
+      { field: "shoulderKg", label: "숄더프레스" },
+      { field: "barbellRowKg", label: "바벨 로우" },
+      { field: "deadliftKg", label: "데드리프트" },
+    ];
+
+    // 맨몸운동 필수 필드
+    const bodyweightRequiredFields = [
+      { field: "pullupReps", label: "풀업" },
+      { field: "situpReps", label: "윗몸일으키기" },
+      { field: "pushupReps", label: "푸쉬업" },
+      { field: "bodyweightSquatReps", label: "스쿼트" },
+      { field: "burpeeReps", label: "버피" },
+    ];
+
+    // 유연성 필수 필드
+    const flexibilityRequiredFields = [
+      { field: "thoracicMobility", label: "흉추 가동성" },
+      { field: "shoulderFlexibility", label: "어깨 유연성" },
+      { field: "hamstring", label: "햄스트링" },
+      { field: "hipMobility", label: "고관절" },
+      { field: "ankleMobility", label: "발목 가동성" },
+    ];
+
+    const missingFields: string[] = [];
+
+    // 웨이트 트레이닝 검증
+    if (selectedExerciseTypes.includes("weight")) {
+      weightRequiredFields.forEach(({ field, label }) => {
+        const value = formData.get(field);
+        if (!value || (typeof value === "string" && value.trim() === "")) {
+          missingFields.push(label);
+        }
+      });
+    }
+
+    // 맨몸운동 검증
+    if (selectedExerciseTypes.includes("bodyweight")) {
+      bodyweightRequiredFields.forEach(({ field, label }) => {
+        const value = formData.get(field);
+        if (!value || (typeof value === "string" && value.trim() === "")) {
+          missingFields.push(label);
+        }
+      });
+    }
+
+    // 유연성 검증
+    if (selectedExerciseTypes.includes("flexibility")) {
+      flexibilityRequiredFields.forEach(({ field, label }) => {
+        const value = formData.get(field);
+        if (!value || (typeof value === "string" && value.trim() === "")) {
+          missingFields.push(label);
+        }
+      });
+    }
+
+    if (missingFields.length > 0) {
+      if (showAlert) {
+        alert(`다음 항목의 점수를 입력해주세요:\n${missingFields.join("\n")}`);
+      }
+      return false;
+    }
+
+    return true;
   };
 
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
@@ -134,8 +220,14 @@ export default function MeasurementPage() {
       return;
     }
 
-    setIsSubmitting(true);
     const formData = new FormData(e.currentTarget);
+
+    // 필수 필드 검증
+    if (!validateRequiredFields(formData)) {
+      return;
+    }
+
+    setIsSubmitting(true);
 
     // 측정 데이터 구성
     const measurementData = convertFormDataToMeasurement(formData, selectedMemberId, selectedMember.name, selectedExerciseTypes);
@@ -175,6 +267,7 @@ export default function MeasurementPage() {
 
       setEvaluationResult(evaluation);
       setApiResponseResults(apiResponse?.data?.results || []);
+      setApiResponseData(apiResponse || null);
       setIsSubmitting(false);
       setShowMeasurementForm(false);
       setShowEvaluation(true);
@@ -209,6 +302,7 @@ export default function MeasurementPage() {
     setShowEvaluation(false);
     setEvaluationResult(null);
     setApiResponseResults([]);
+    setApiResponseData(null);
     setShowSuccess(true);
     setSelectedMemberId("");
     setSelectedExerciseTypes([]);
@@ -299,7 +393,7 @@ export default function MeasurementPage() {
                 </div>
               </div>
 
-              <form className="space-y-6" onSubmit={handleSubmit}>
+              <form className="space-y-6" onSubmit={handleSubmit} onChange={handleFormChange} onInput={handleFormChange}>
                 {/* 선택한 운동 타입에 맞는 운동 섹션들 */}
                 {filteredExerciseSections.length > 0 ? (
                   <>
@@ -349,7 +443,7 @@ export default function MeasurementPage() {
                 <div className="sticky bottom-0 bg-white pt-6 pb-2 -mx-8 px-8 border-t border-gray-200 mt-8">
                   <button
                     type="submit"
-                    disabled={isSubmitting || !selectedMemberId}
+                    disabled={isSubmitting || !selectedMemberId || !formValid}
                     className="w-full bg-gradient-to-r from-green-500 to-emerald-600 text-white text-lg font-semibold rounded-lg py-4 hover:from-green-600 hover:to-emerald-700 transition-all shadow-lg hover:shadow-xl disabled:bg-gray-300 disabled:cursor-not-allowed disabled:hover:from-gray-300 disabled:hover:to-gray-300 disabled:shadow-none"
                   >
                     {isSubmitting ? (
@@ -376,6 +470,7 @@ export default function MeasurementPage() {
         <EvaluationModal
           evaluationResult={evaluationResult}
           apiResults={apiResponseResults}
+          apiResponse={apiResponseData || undefined}
           selectedExerciseTypes={selectedExerciseTypes}
           member={{
             name: selectedMember.name,

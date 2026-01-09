@@ -21,7 +21,7 @@ api.interceptors.request.use(
   (config) => {
     // 클라이언트 사이드에서만 실행
     if (typeof window !== "undefined") {
-      const token = sessionStorage.getItem("accessToken");
+      const token = localStorage.getItem("accessToken");
       if (token) {
         config.headers.Authorization = `Bearer ${token}`;
         devLog("토큰 추가됨:", token.substring(0, 20) + "...");
@@ -411,6 +411,14 @@ export interface CalculateMeasurementsRequest {
   measurements: MeasurementItem[];
 }
 
+export interface AdjustedLevels {
+  beginner?: number;
+  novice?: number;
+  intermediate?: number;
+  advanced?: number;
+  elite?: number;
+}
+
 export interface MeasurementResult {
   categoryId: number;
   exerciseName: string;
@@ -421,6 +429,8 @@ export interface MeasurementResult {
   nextLevel: string;
   nextLevelTarget: number;
   remaining: number;
+  adjustedLevels?: AdjustedLevels;
+  trainerFeedback?: string;
 }
 
 export interface TotalSummary {

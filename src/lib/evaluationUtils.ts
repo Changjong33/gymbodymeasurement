@@ -132,8 +132,3 @@ function collectIssuesByCategory(categoryId: number, measurementData: any, notes
 
   return issues;
 }
-
-// 문제점 기반 평가 텍스트 생성 - 텍스트 제거
-function generateEvaluationText(categoryId: number, exerciseName: string, levelName: string, issues: string[], measurementData: any): string {
-  return ""; // 텍스트 코멘트 제거
-}

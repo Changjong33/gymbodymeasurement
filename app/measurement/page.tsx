@@ -6,7 +6,6 @@ import { useMeasurementStore } from "@/store/measurementStore";
 import { useAuthStore } from "@/store/authStore";
 import { useRouter } from "next/navigation";
 import { calculateMeasurementsApi, MeasurementResult } from "@/lib/api";
-import { generateMockMeasurementsResponse } from "@/lib/evaluationUtils";
 import { convertFormDataToMeasurement, convertMeasurementToApiRequest } from "@/lib/measurementUtils";
 import { ExerciseType, BaseSection } from "@/types/exercise";
 import { weightTrainingSections } from "./WeightTrainingSection";
@@ -249,12 +248,10 @@ export default function MeasurementPage() {
           console.warn("측정 계산 API 호출 실패, mock 데이터 사용:", apiError?.response?.status || apiError?.message);
           // member weight 정보를 measurementData에 추가
           const measurementDataWithWeight = { ...measurementData, memberWeight: selectedMember.weight };
-          apiResponse = generateMockMeasurementsResponse(measurementDataWithWeight, selectedExerciseTypes);
         }
       } else {
         // measurements가 비어있으면 mock 데이터 생성
         const measurementDataWithWeight = { ...measurementData, memberWeight: selectedMember.weight };
-        apiResponse = generateMockMeasurementsResponse(measurementDataWithWeight, selectedExerciseTypes);
       }
 
       // 로컬 스토어에 저장
@@ -271,9 +268,7 @@ export default function MeasurementPage() {
       // 예상치 못한 오류 발생 시에도 mock 데이터로 처리
       try {
         const measurementDataWithWeight = { ...measurementData, memberWeight: selectedMember.weight };
-        const mockResponse = generateMockMeasurementsResponse(measurementDataWithWeight, selectedExerciseTypes);
         addMeasurement(measurementData);
-        setApiResponseResults(mockResponse.data.results || []);
         setIsSubmitting(false);
         setShowMeasurementForm(false);
         setShowEvaluation(true);

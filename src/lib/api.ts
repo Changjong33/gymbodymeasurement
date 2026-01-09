@@ -430,7 +430,7 @@ export interface MeasurementResult {
   value: number;
   unit: string;
   score: number; // 1~5
-  adjustedLevels: AdjustedLevels;
+  adjustedLevels?: AdjustedLevels;
 }
 
 export interface TotalSummary {

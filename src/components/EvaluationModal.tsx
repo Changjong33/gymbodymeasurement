@@ -64,26 +64,26 @@ export default function EvaluationModal({ results = [], selectedExerciseTypes = 
     if (!results || results.length === 0) return [];
 
     return results
-      .filter((result) => {
-        // adjustedLevels가 있는 경우만 포함
-        return result.adjustedLevels != null && typeof result.adjustedLevels === "object";
-      })
       .map((result) => {
-        const adjustedLevels = result.adjustedLevels!;
-        // unit 변환: "reps" -> "회", "kg" -> "kg", 기타 -> ""
-        const unitText = result.unit === "reps" ? "회" : result.unit === "kg" ? "kg" : result.unit || "";
+        const levels = result.adjustedLevels;
+
+        if (!levels) {
+          console.warn("adjustedLevels 없음:", result);
+          return null;
+        }
 
         return {
           categoryId: result.categoryId,
-          exerciseName: result.exerciseName || "",
-          unit: unitText,
-          beginner: adjustedLevels?.beginner ?? 0,
-          novice: adjustedLevels?.novice ?? 0,
-          intermediate: adjustedLevels?.intermediate ?? 0,
-          advanced: adjustedLevels?.advanced ?? 0,
-          elite: adjustedLevels?.elite ?? 0,
+          exerciseName: result.exerciseName ?? "",
+          unit: result.unit === "reps" ? "회" : result.unit ?? "",
+          beginner: levels.beginner ?? 0,
+          novice: levels.novice ?? 0,
+          intermediate: levels.intermediate ?? 0,
+          advanced: levels.advanced ?? 0,
+          elite: levels.elite ?? 0,
         };
-      });
+      })
+      .filter(Boolean) as LevelStandardRow[];
   }, [results]);
 
   return (

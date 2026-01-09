@@ -141,11 +141,11 @@ export function convertFlexibilityToChartData(measurementData: any): Array<{ cat
   // categoryId 매핑: 유연성
   // 11=흉추가동성, 12=어깨유연성, 13=햄스트링, 14=고관절, 15=발목가동성
   const flexibilityMap: Record<string, { categoryId: number; name: string }> = {
-    thoracicMobility: { categoryId: 11, name: "유연성 – 흉추 가동성" },
-    shoulderFlexibility: { categoryId: 12, name: "유연성 – 어깨 유연성" },
-    hamstring: { categoryId: 13, name: "유연성 – 햄스트링" },
-    hipMobility: { categoryId: 14, name: "유연성 – 고관절" },
-    ankleMobility: { categoryId: 15, name: "유연성 – 발목 가동성" },
+    thoracicMobility: { categoryId: 11, name: "흉추 가동성" },
+    shoulderFlexibility: { categoryId: 12, name: "어깨 유연성" },
+    hamstring: { categoryId: 13, name: "햄스트링" },
+    hipMobility: { categoryId: 14, name: "고관절" },
+    ankleMobility: { categoryId: 15, name: "발목 가동성" },
   };
 
   // 5단계 평가: excellent=5, good=4, normal=3, bad=2, very_bad=1

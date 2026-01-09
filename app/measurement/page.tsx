@@ -237,15 +237,40 @@ export default function MeasurementPage() {
       let apiResponse: CalculateMeasurementsResponse | null = null;
       if (measurements.length > 0) {
         // memberId를 숫자로 변환 (API가 숫자를 기대함)
-        const memberIdNum = parseInt(selectedMemberId.replace(/\D/g, "")) || parseInt(selectedMemberId);
+        // selectedMemberId는 백엔드에서 받은 실제 DB의 memberId (숫자 문자열)
+        let memberIdNum: number;
+        if (selectedMemberId.startsWith("member_")) {
+          // 로컬 스토어의 임의 ID인 경우 숫자 추출 시도
+          memberIdNum = parseInt(selectedMemberId.replace(/\D/g, "")) || 0;
+        } else {
+          // 백엔드에서 받은 숫자 ID인 경우 직접 변환
+          memberIdNum = parseInt(selectedMemberId, 10);
+        }
+
+        if (!memberIdNum || isNaN(memberIdNum)) {
+          console.error("유효하지 않은 memberId:", selectedMemberId);
+          alert("회원 ID가 유효하지 않습니다. 다시 선택해주세요.");
+          setIsSubmitting(false);
+          return;
+        }
+
         try {
+          console.log("API 호출 - memberId:", memberIdNum, "measurements:", measurements);
           apiResponse = await calculateMeasurementsApi({
             memberId: memberIdNum,
             measurements,
           });
+          console.log("API 응답 성공:", apiResponse);
         } catch (apiError: any) {
-          // API 호출 실패 시 에러 로그만 남기고 계속 진행
-          console.warn("측정 계산 API 호출 실패:", apiError?.response?.status || apiError?.message);
+          // API 호출 실패 시 상세 에러 로그
+          console.error("측정 계산 API 호출 실패:", {
+            status: apiError?.response?.status,
+            statusText: apiError?.response?.statusText,
+            data: apiError?.response?.data,
+            message: apiError?.message,
+            url: apiError?.config?.url,
+            method: apiError?.config?.method,
+          });
           // API 응답이 없어도 결과를 표시할 수 있도록 빈 배열로 설정
           apiResponse = null;
         }

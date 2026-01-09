@@ -431,6 +431,10 @@ export interface MeasurementResult {
   unit: string;
   score: number; // 1~5
   adjustedLevels?: AdjustedLevels;
+  level?: string; // 레벨명 (예: "Intermediate", "Elite" 등)
+  nextLevel?: string; // 다음 레벨명
+  nextLevelTarget?: number; // 다음 레벨 목표값
+  remaining?: number; // 다음 레벨까지 남은 값
 }
 
 export interface TotalSummary {
@@ -450,9 +454,12 @@ export interface CalculateMeasurementsResponse {
 
 export const calculateMeasurementsApi = async (data: CalculateMeasurementsRequest): Promise<CalculateMeasurementsResponse> => {
   try {
+    const fullUrl = `${API_BASE_URL}/members/calculate-measurements`;
     devLog("=== 측정 계산 API 호출 시작 ===");
-    devLog("URL:", "/members/calculate-measurements");
-    devLog("Request Body:", data);
+    devLog("Full URL:", fullUrl);
+    devLog("Request Body:", JSON.stringify(data, null, 2));
+    devLog("MemberId:", data.memberId, "Type:", typeof data.memberId);
+    devLog("Measurements Count:", data.measurements.length);
 
     const response = await api.post<CalculateMeasurementsResponse>("/members/calculate-measurements", data, {
       headers: {
@@ -465,9 +472,18 @@ export const calculateMeasurementsApi = async (data: CalculateMeasurementsReques
     return response.data;
   } catch (error: any) {
     devError("=== 측정 계산 API 호출 실패 ===");
-    devError("Error:", error);
+    devError("Full URL:", `${API_BASE_URL}/members/calculate-measurements`);
+    devError("Request Data:", JSON.stringify(data, null, 2));
+    devError("Error Status:", error.response?.status);
+    devError("Error Status Text:", error.response?.statusText);
     devError("Error Response Data:", error.response?.data);
-    devError("Error Response Status:", error.response?.status);
+    devError("Error Message:", error.message);
+    devError("Error Config:", {
+      url: error.config?.url,
+      method: error.config?.method,
+      baseURL: error.config?.baseURL,
+      headers: error.config?.headers,
+    });
     throw error;
   }
 };

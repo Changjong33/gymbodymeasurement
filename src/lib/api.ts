@@ -417,11 +417,11 @@ export interface CalculateMeasurementsRequest {
 
 // 간소화된 측정 결과 인터페이스
 export interface AdjustedLevels {
-  beginner: number;
-  novice: number;
-  intermediate: number;
-  advanced: number;
-  elite: number;
+  beginner: number | null;
+  novice: number | null;
+  intermediate: number | null;
+  advanced: number | null;
+  elite: number | null;
 }
 
 export interface MeasurementResult {
@@ -484,6 +484,45 @@ export const calculateMeasurementsApi = async (data: CalculateMeasurementsReques
       baseURL: error.config?.baseURL,
       headers: error.config?.headers,
     });
+    throw error;
+  }
+};
+
+// 회원 측정 이력 조회 API
+export interface MeasurementSession {
+  measuredAt: string; // ISO_DATE
+  results: MeasurementResult[];
+}
+
+export interface MeasurementSessionsByDate {
+  date: string; // YYYY-MM-DD
+  sessions: MeasurementSession[];
+}
+
+export interface GetMemberMeasurementsResponse {
+  statusCode?: number;
+  data: {
+    sessionsByDate: MeasurementSessionsByDate[];
+  };
+  timestamp?: string;
+}
+
+export const getMemberMeasurementsApi = async (memberId: string | number): Promise<GetMemberMeasurementsResponse> => {
+  try {
+    devLog("=== 회원 측정 이력 조회 API 호출 시작 ===");
+    devLog("MemberId:", memberId);
+
+    const response = await api.get<GetMemberMeasurementsResponse>(`/members/${memberId}/measurements`);
+
+    devLog("=== 회원 측정 이력 조회 API 호출 성공 ===");
+    devLog("Response:", response.data);
+    return response.data;
+  } catch (error: any) {
+    devError("=== 회원 측정 이력 조회 API 호출 실패 ===");
+    devError("MemberId:", memberId);
+    devError("Error Status:", error.response?.status);
+    devError("Error Response Data:", error.response?.data);
+    devError("Error Message:", error.message);
     throw error;
   }
 };

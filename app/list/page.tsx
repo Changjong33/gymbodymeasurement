@@ -4,9 +4,7 @@ import { useState, FormEvent, useEffect } from "react";
 import { useMemberStore, Member } from "@/store/memberStore";
 import { useAuthStore } from "@/store/authStore";
 import { useRouter } from "next/navigation";
-import { getMembersApi, updateMemberApi, deleteMemberApi } from "@/lib/api";
-import { getSavedMeasurementsByMemberId } from "@/lib/measurementStorage";
-import { SavedMeasurement } from "@/types/measurement";
+import { getMembersApi, updateMemberApi, deleteMemberApi, getMemberMeasurementsApi, MeasurementSessionsByDate, MeasurementSession, MeasurementResult } from "@/lib/api";
 import EvaluationModal from "@/components/EvaluationModal";
 
 export default function ListPage() {
@@ -21,9 +19,12 @@ export default function ListPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [selectedMemberForHistory, setSelectedMemberForHistory] = useState<Member | null>(null);
-  const [memberHistory, setMemberHistory] = useState<SavedMeasurement[]>([]);
-  const [selectedHistoryMeasurement, setSelectedHistoryMeasurement] = useState<SavedMeasurement | null>(null);
+  const [sessionsByDate, setSessionsByDate] = useState<MeasurementSessionsByDate[]>([]);
+  const [selectedDate, setSelectedDate] = useState<string>("");
+  const [selectedSession, setSelectedSession] = useState<MeasurementSession | null>(null);
+  const [selectedResults, setSelectedResults] = useState<MeasurementResult[]>([]);
   const [showHistoryModal, setShowHistoryModal] = useState(false);
+  const [isLoadingHistory, setIsLoadingHistory] = useState(false);
 
   // 검색어에 따라 회원 필터링
   const filteredMembers = members.filter((member) => member.name.toLowerCase().includes(searchQuery.toLowerCase()));
@@ -296,26 +297,84 @@ export default function ListPage() {
     URL.revokeObjectURL(url);
   };
 
-  const handleViewHistory = (member: Member) => {
-    const history = getSavedMeasurementsByMemberId(member.id);
+  const handleViewHistory = async (member: Member) => {
     setSelectedMemberForHistory(member);
-    setMemberHistory(history);
     setShowHistoryModal(true);
+    setIsLoadingHistory(true);
+    setSessionsByDate([]);
+    setSelectedDate("");
+    setSelectedSession(null);
+    setSelectedResults([]);
+
+    try {
+      // memberId를 숫자로 변환
+      const numericId = member.id.includes("member_") ? null : parseInt(member.id, 10);
+
+      if (!numericId || isNaN(numericId)) {
+        alert("회원 ID가 유효하지 않습니다.");
+        setIsLoadingHistory(false);
+        return;
+      }
+
+      const response = await getMemberMeasurementsApi(numericId);
+      const sessions = response.data?.sessionsByDate || [];
+      setSessionsByDate(sessions);
+    } catch (error: any) {
+      console.error("측정 이력 조회 실패:", error);
+      alert(`측정 이력 조회 중 오류가 발생했습니다: ${error.response?.data?.message || error.message}`);
+    } finally {
+      setIsLoadingHistory(false);
+    }
   };
 
   const handleCloseHistoryModal = () => {
     setShowHistoryModal(false);
     setSelectedMemberForHistory(null);
-    setMemberHistory([]);
-    setSelectedHistoryMeasurement(null);
+    setSessionsByDate([]);
+    setSelectedDate("");
+    setSelectedSession(null);
+    setSelectedResults([]);
   };
 
-  const handleSelectHistoryDate = (measurement: SavedMeasurement) => {
-    setSelectedHistoryMeasurement(measurement);
+  const handleSelectDate = (date: string) => {
+    setSelectedDate(date);
+    setSelectedSession(null);
+    setSelectedResults([]);
+  };
+
+  const handleSelectSession = (session: MeasurementSession) => {
+    setSelectedSession(session);
+    setSelectedResults(session.results || []);
   };
 
   const handleCloseEvaluation = () => {
-    setSelectedHistoryMeasurement(null);
+    setSelectedResults([]);
+    setSelectedSession(null);
+  };
+
+  // 선택한 날짜의 세션 목록 가져오기
+  const getSessionsForDate = (date: string): MeasurementSession[] => {
+    const dateGroup = sessionsByDate.find((d) => d.date === date);
+    return dateGroup?.sessions || [];
+  };
+
+  // 측정 시간 포맷팅
+  const formatMeasurementTime = (isoDate: string): string => {
+    const date = new Date(isoDate);
+    return date.toLocaleTimeString("ko-KR", {
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  };
+
+  // 날짜 포맷팅
+  const formatDate = (dateStr: string): string => {
+    const date = new Date(dateStr);
+    return date.toLocaleDateString("ko-KR", {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+    });
   };
 
   return (
@@ -611,7 +670,7 @@ export default function ListPage() {
       {/* 측정 이력 모달 */}
       {showHistoryModal && selectedMemberForHistory && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-xl max-w-2xl w-full max-h-[80vh] flex flex-col">
+          <div className="bg-white rounded-xl shadow-xl max-w-3xl w-full max-h-[80vh] flex flex-col">
             <div className="flex items-center justify-between p-6 border-b border-gray-200">
               <h2 className="text-2xl font-bold text-gray-800">{selectedMemberForHistory.name}님의 측정 이력</h2>
               <button onClick={handleCloseHistoryModal} className="text-gray-400 hover:text-gray-600 text-2xl">
@@ -619,40 +678,80 @@ export default function ListPage() {
               </button>
             </div>
             <div className="flex-1 overflow-auto p-6">
-              {memberHistory.length === 0 ? (
+              {isLoadingHistory ? (
+                <div className="text-center py-12 text-gray-500">
+                  <span className="text-4xl mb-3 block animate-spin">⏳</span>
+                  <p>측정 이력을 불러오는 중...</p>
+                </div>
+              ) : sessionsByDate.length === 0 ? (
                 <div className="text-center py-12 text-gray-500">
                   <span className="text-4xl mb-3 block">📊</span>
                   <p>측정 이력이 없습니다.</p>
                 </div>
               ) : (
-                <div className="space-y-3">
-                  {memberHistory.map((measurement, index) => {
-                    const date = new Date(measurement.measuredAt);
-                    const formattedDate = date.toLocaleDateString("ko-KR", {
-                      year: "numeric",
-                      month: "long",
-                      day: "numeric",
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    });
-                    return (
-                      <button
-                        key={index}
-                        onClick={() => handleSelectHistoryDate(measurement)}
-                        className="w-full text-left bg-gray-50 hover:bg-blue-50 border border-gray-200 hover:border-blue-300 rounded-lg p-4 transition-all"
-                      >
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <div className="font-semibold text-gray-800">{formattedDate}</div>
-                            <div className="text-sm text-gray-600 mt-1">
-                              {measurement.selectedExerciseTypes?.map((type) => (type === "flexibility" ? "유연성" : type === "bodyweight" ? "맨몸운동" : "웨이트 트레이닝")).join(", ") || "측정 항목"}
+                <div className="space-y-4">
+                  {/* 날짜 선택 */}
+                  {!selectedDate ? (
+                    <div>
+                      <h3 className="text-lg font-semibold text-gray-700 mb-3">측정 날짜 선택</h3>
+                      <div className="space-y-2">
+                        {sessionsByDate.map((dateGroup) => (
+                          <button
+                            key={dateGroup.date}
+                            onClick={() => handleSelectDate(dateGroup.date)}
+                            className="w-full text-left bg-gray-50 hover:bg-blue-50 border border-gray-200 hover:border-blue-300 rounded-lg p-4 transition-all"
+                          >
+                            <div className="flex items-center justify-between">
+                              <div>
+                                <div className="font-semibold text-gray-800">{formatDate(dateGroup.date)}</div>
+                                <div className="text-sm text-gray-600 mt-1">{dateGroup.sessions.length}개의 측정 세션</div>
+                              </div>
+                              <div className="text-blue-500 font-medium">선택 →</div>
                             </div>
-                          </div>
-                          <div className="text-blue-500 font-medium">보기 →</div>
-                        </div>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  ) : (
+                    <>
+                      {/* 뒤로가기 버튼 */}
+                      <button
+                        onClick={() => {
+                          setSelectedDate("");
+                          setSelectedSession(null);
+                          setSelectedResults([]);
+                        }}
+                        className="text-blue-600 hover:text-blue-800 font-medium mb-4 flex items-center gap-2"
+                      >
+                        <span>←</span>
+                        <span>날짜 목록으로 돌아가기</span>
                       </button>
-                    );
-                  })}
+
+                      {/* 측정 시간 선택 */}
+                      {!selectedSession ? (
+                        <div>
+                          <h3 className="text-lg font-semibold text-gray-700 mb-3">{formatDate(selectedDate)} - 측정 시간 선택</h3>
+                          <div className="space-y-2">
+                            {getSessionsForDate(selectedDate).map((session) => (
+                              <button
+                                key={session.measuredAt}
+                                onClick={() => handleSelectSession(session)}
+                                className="w-full text-left bg-gray-50 hover:bg-blue-50 border border-gray-200 hover:border-blue-300 rounded-lg p-4 transition-all"
+                              >
+                                <div className="flex items-center justify-between">
+                                  <div>
+                                    <div className="font-semibold text-gray-800">{formatMeasurementTime(session.measuredAt)}</div>
+                                    <div className="text-sm text-gray-600 mt-1">{session.results?.length || 0}개의 측정 항목</div>
+                                  </div>
+                                  <div className="text-blue-500 font-medium">결과 보기 →</div>
+                                </div>
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      ) : null}
+                    </>
+                  )}
                 </div>
               )}
             </div>
@@ -661,12 +760,19 @@ export default function ListPage() {
       )}
 
       {/* 과거 측정 결과 EvaluationModal */}
-      {selectedHistoryMeasurement && (
+      {selectedResults.length > 0 && selectedMemberForHistory && (
         <EvaluationModal
-          results={selectedHistoryMeasurement.results}
-          selectedExerciseTypes={selectedHistoryMeasurement.selectedExerciseTypes || []}
-          member={selectedHistoryMeasurement.member}
-          measurementData={selectedHistoryMeasurement.measurementData}
+          results={selectedResults}
+          selectedExerciseTypes={[]} // 백엔드에서 운동 타입 정보가 없으므로 빈 배열
+          member={{
+            name: selectedMemberForHistory.name,
+            age: selectedMemberForHistory.age,
+            gender: selectedMemberForHistory.gender,
+            height: selectedMemberForHistory.height,
+            weight: selectedMemberForHistory.weight,
+            notes: selectedMemberForHistory.notes,
+          }}
+          measurementData={null} // 과거 측정은 읽기 전용이므로 measurementData 없음
           onClose={handleCloseEvaluation}
         />
       )}

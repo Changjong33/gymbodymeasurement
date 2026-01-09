@@ -13,7 +13,7 @@ if (typeof window !== "undefined") {
 
 export const api = axios.create({
   baseURL: API_BASE_URL,
-  timeout: 10000, // 10초 타임아웃 추가
+  timeout: 20000, // 20초 타임아웃 (백엔드 느림 대응)
 });
 
 // 요청 인터셉터: 모든 요청에 JWT 토큰 자동 추가
@@ -28,6 +28,8 @@ api.interceptors.request.use(
         devLog("토큰 추가됨:", token.substring(0, 20) + "...");
       } else {
         devError("토큰이 없습니다! (sessionStorage 확인)");
+        // 토큰이 없으면 요청 자체를 취소
+        return Promise.reject(new Error("accessToken이 없습니다. 로그인이 필요합니다."));
       }
     }
     return config;
@@ -508,21 +510,40 @@ export interface GetMemberMeasurementsResponse {
 }
 
 export const getMemberMeasurementsApi = async (memberId: string | number): Promise<GetMemberMeasurementsResponse> => {
+  // 클라이언트 사이드에서만 실행
+  if (typeof window === "undefined") {
+    throw new Error("서버 사이드에서 API를 호출할 수 없습니다.");
+  }
+
+  // accessToken 체크
+  const accessToken = sessionStorage.getItem("accessToken");
+  if (!accessToken) {
+    console.warn("accessToken 없음 → API 호출 중단");
+    throw new Error("accessToken이 없습니다. 로그인이 필요합니다.");
+  }
+
   try {
-    devLog("=== 회원 측정 이력 조회 API 호출 시작 ===");
-    devLog("MemberId:", memberId);
+    console.log("=== 회원 측정 이력 조회 API 호출 시작 ===");
+    console.log("memberId:", memberId);
+    console.log("accessToken:", accessToken ? accessToken.substring(0, 20) + "..." : "없음");
+    console.log("GET /members/:id/measurements 호출 시작");
 
     const response = await api.get<GetMemberMeasurementsResponse>(`/members/${memberId}/measurements`);
 
-    devLog("=== 회원 측정 이력 조회 API 호출 성공 ===");
-    devLog("Response:", response.data);
+    console.log("=== 회원 측정 이력 조회 API 호출 성공 ===");
+    console.log("응답 성공:", response.data);
     return response.data;
   } catch (error: any) {
-    devError("=== 회원 측정 이력 조회 API 호출 실패 ===");
-    devError("MemberId:", memberId);
-    devError("Error Status:", error.response?.status);
-    devError("Error Response Data:", error.response?.data);
-    devError("Error Message:", error.message);
+    console.error("=== 회원 측정 이력 조회 API 호출 실패 ===");
+    console.error("MemberId:", memberId);
+    console.error("Error Status:", error.response?.status);
+    console.error("Error Status Text:", error.response?.statusText);
+    console.error("Error Response Data:", error.response?.data);
+    console.error("Error Message:", error.message);
+    console.error("Error Code:", error.code);
+    if (error.code === "ECONNABORTED") {
+      console.error("타임아웃 발생 - 백엔드 응답이 너무 느립니다.");
+    }
     throw error;
   }
 };

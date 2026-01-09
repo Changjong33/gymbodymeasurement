@@ -11,6 +11,7 @@ export default function ListPage() {
   const router = useRouter();
   const { getEffectiveAuth, isDevMode } = useAuthStore();
   const { members, removeMember, updateMember, setMembers } = useMemberStore();
+  const [mounted, setMounted] = useState(false);
   const [editingMember, setEditingMember] = useState<Member | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [injuries, setInjuries] = useState<string[]>([]);
@@ -25,6 +26,12 @@ export default function ListPage() {
   const [selectedResults, setSelectedResults] = useState<MeasurementResult[]>([]);
   const [showHistoryModal, setShowHistoryModal] = useState(false);
   const [isLoadingHistory, setIsLoadingHistory] = useState(false);
+  const [historyError, setHistoryError] = useState<string | null>(null);
+
+  // Hydration 에러 방지: mounted 패턴
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   // 검색어에 따라 회원 필터링
   const filteredMembers = members.filter((member) => member.name.toLowerCase().includes(searchQuery.toLowerCase()));
@@ -35,10 +42,16 @@ export default function ListPage() {
 
   // 로그인 체크 (개발 모드에서는 우회)
   useEffect(() => {
+    if (!mounted) return;
     if (!isLoggedIn && !devMode) {
       router.push("/login");
     }
-  }, [isLoggedIn, devMode, router]);
+  }, [mounted, isLoggedIn, devMode, router]);
+
+  // 서버 사이드 렌더링 시 아무것도 렌더링하지 않음
+  if (!mounted) {
+    return null;
+  }
 
   // 회원 목록 조회 함수
   const fetchMembers = async () => {
@@ -298,30 +311,78 @@ export default function ListPage() {
   };
 
   const handleViewHistory = async (member: Member) => {
+    // 클라이언트 사이드에서만 실행
+    if (typeof window === "undefined") return;
+
     setSelectedMemberForHistory(member);
     setShowHistoryModal(true);
     setIsLoadingHistory(true);
+    setHistoryError(null);
     setSessionsByDate([]);
     setSelectedDate("");
     setSelectedSession(null);
     setSelectedResults([]);
 
     try {
-      // memberId를 숫자로 변환
-      const numericId = member.id.includes("member_") ? null : parseInt(member.id, 10);
-
-      if (!numericId || isNaN(numericId)) {
-        alert("회원 ID가 유효하지 않습니다.");
+      // accessToken 체크
+      const accessToken = sessionStorage.getItem("accessToken");
+      if (!accessToken) {
+        console.warn("accessToken 없음 → API 호출 중단");
+        setHistoryError("로그인이 필요합니다. 다시 로그인해주세요.");
         setIsLoadingHistory(false);
         return;
       }
 
+      // memberId를 숫자로 변환
+      const numericId = member.id.includes("member_") ? null : parseInt(member.id, 10);
+
+      if (!numericId || isNaN(numericId)) {
+        setHistoryError("회원 ID가 유효하지 않습니다.");
+        setIsLoadingHistory(false);
+        return;
+      }
+
+      console.log("=== 측정 이력 조회 시작 ===");
+      console.log("memberId:", numericId);
+      console.log("accessToken:", accessToken ? accessToken.substring(0, 20) + "..." : "없음");
+
       const response = await getMemberMeasurementsApi(numericId);
-      const sessions = response.data?.sessionsByDate || [];
+
+      // 응답 데이터 구조 확인
+      console.log("응답 데이터:", response);
+      console.log("response.data:", response.data);
+      console.log("response.data?.sessionsByDate:", response.data?.sessionsByDate);
+
+      // 백엔드 응답 구조에 맞게 처리
+      let sessions: MeasurementSessionsByDate[] = [];
+
+      // 응답이 data.sessionsByDate 형태인 경우
+      if (response.data?.sessionsByDate) {
+        sessions = response.data.sessionsByDate;
+      }
+      // 응답이 직접 sessionsByDate인 경우
+      else if ((response as any).sessionsByDate) {
+        sessions = (response as any).sessionsByDate;
+      }
+
+      console.log("최종 sessions:", sessions);
       setSessionsByDate(sessions);
     } catch (error: any) {
       console.error("측정 이력 조회 실패:", error);
-      alert(`측정 이력 조회 중 오류가 발생했습니다: ${error.response?.data?.message || error.message}`);
+
+      let errorMessage = "측정 이력 조회 중 오류가 발생했습니다.";
+
+      if (error.code === "ECONNABORTED") {
+        errorMessage = "요청 시간이 초과되었습니다. 네트워크 상태를 확인해주세요.";
+      } else if (error.message?.includes("accessToken")) {
+        errorMessage = "로그인이 필요합니다. 다시 로그인해주세요.";
+      } else if (error.response?.data?.message) {
+        errorMessage = error.response.data.message;
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+
+      setHistoryError(errorMessage);
     } finally {
       setIsLoadingHistory(false);
     }
@@ -358,23 +419,33 @@ export default function ListPage() {
     return dateGroup?.sessions || [];
   };
 
-  // 측정 시간 포맷팅
+  // 측정 시간 포맷팅 (mounted 후에만 실행)
   const formatMeasurementTime = (isoDate: string): string => {
-    const date = new Date(isoDate);
-    return date.toLocaleTimeString("ko-KR", {
-      hour: "2-digit",
-      minute: "2-digit",
-    });
+    if (!mounted || typeof window === "undefined") return "";
+    try {
+      const date = new Date(isoDate);
+      return date.toLocaleTimeString("ko-KR", {
+        hour: "2-digit",
+        minute: "2-digit",
+      });
+    } catch {
+      return "";
+    }
   };
 
-  // 날짜 포맷팅
+  // 날짜 포맷팅 (mounted 후에만 실행)
   const formatDate = (dateStr: string): string => {
-    const date = new Date(dateStr);
-    return date.toLocaleDateString("ko-KR", {
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-    });
+    if (!mounted || typeof window === "undefined") return "";
+    try {
+      const date = new Date(dateStr);
+      return date.toLocaleDateString("ko-KR", {
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+      });
+    } catch {
+      return "";
+    }
   };
 
   return (
@@ -470,7 +541,7 @@ export default function ListPage() {
                           {member.notes || "-"}
                         </div>
                       </td>
-                      <td className="py-3 px-4 text-gray-500 text-sm">{new Date(member.createdAt).toLocaleDateString("ko-KR")}</td>
+                      <td className="py-3 px-4 text-gray-500 text-sm">{mounted && typeof window !== "undefined" ? new Date(member.createdAt).toLocaleDateString("ko-KR") : member.createdAt}</td>
                       <td className="py-3 px-4">
                         <div className="flex items-center gap-3">
                           <button onClick={() => handleViewHistory(member)} className="text-green-500 hover:text-green-700 font-medium text-sm">
@@ -682,6 +753,20 @@ export default function ListPage() {
                 <div className="text-center py-12 text-gray-500">
                   <span className="text-4xl mb-3 block animate-spin">⏳</span>
                   <p>측정 이력을 불러오는 중...</p>
+                  <p className="text-sm mt-2">잠시만 기다려주세요...</p>
+                </div>
+              ) : historyError ? (
+                <div className="text-center py-12">
+                  <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-4">
+                    <span className="text-4xl mb-3 block">❌</span>
+                    <p className="text-red-800 font-medium">{historyError}</p>
+                  </div>
+                  <button
+                    onClick={() => selectedMemberForHistory && handleViewHistory(selectedMemberForHistory)}
+                    className="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors"
+                  >
+                    다시 시도
+                  </button>
                 </div>
               ) : sessionsByDate.length === 0 ? (
                 <div className="text-center py-12 text-gray-500">

@@ -66,8 +66,8 @@ export default function MeasurementRadarChart({ results, title, showDataLabels =
         borderColor: "rgba(34, 197, 94, 1)", // green-500
         borderWidth: 2,
         pointBackgroundColor: "rgba(34, 197, 94, 1)",
-        pointBorderColor: "#fff",
-        pointHoverBackgroundColor: "#fff",
+        pointBorderColor: "#ffffff",
+        pointHoverBackgroundColor: "#ffffff",
         pointHoverBorderColor: "rgba(34, 197, 94, 1)",
       },
     ],

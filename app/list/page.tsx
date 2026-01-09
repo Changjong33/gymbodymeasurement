@@ -33,12 +33,17 @@ export default function ListPage() {
     setMounted(true);
   }, []);
 
-  // 검색어에 따라 회원 필터링
-  const filteredMembers = members.filter((member) => member.name.toLowerCase().includes(searchQuery.toLowerCase()));
-
   // 실제 인증 상태 가져오기 (개발 모드 우회 포함)
   const { isLoggedIn } = getEffectiveAuth();
   const devMode = isDevMode();
+
+  // 서버 사이드 렌더링 시 아무것도 렌더링하지 않음
+  if (!mounted || typeof window === "undefined") {
+    return null;
+  }
+
+  // 검색어에 따라 회원 필터링 (mounted 후에만 실행)
+  const filteredMembers = members.filter((member) => member.name.toLowerCase().includes(searchQuery.toLowerCase()));
 
   // 로그인 체크 (개발 모드에서는 우회)
   useEffect(() => {
@@ -48,25 +53,29 @@ export default function ListPage() {
     }
   }, [mounted, isLoggedIn, devMode, router]);
 
-  // 서버 사이드 렌더링 시 아무것도 렌더링하지 않음
-  if (!mounted) {
-    return null;
-  }
-
   // 회원 목록 조회 함수
   const fetchMembers = async () => {
+    // 클라이언트 사이드에서만 실행
+    if (typeof window === "undefined" || !mounted) return;
     if (!isLoggedIn && !devMode) return;
 
     setIsLoading(true);
     try {
+      // accessToken 체크
+      const accessToken = sessionStorage.getItem("accessToken");
+      if (!accessToken && !devMode) {
+        console.warn("accessToken 없음 → 회원 목록 조회 중단");
+        setMembers([]);
+        setIsLoading(false);
+        return;
+      }
+
       // 로그인한 계정의 gymId 가져오기
       const { gymId: authGymId } = getEffectiveAuth();
 
       // gymId가 없으면 회원 조회 불가
-      if (!authGymId) {
-        if (process.env.NEXT_PUBLIC_APP_ENV === "development" || process.env.NODE_ENV === "development") {
-          console.error("gymId가 없습니다. 로그인 상태를 확인해주세요.");
-        }
+      if (!authGymId && !devMode) {
+        console.error("gymId가 없습니다. 로그인 상태를 확인해주세요.");
         setMembers([]);
         setIsLoading(false);
         return;
@@ -75,9 +84,7 @@ export default function ListPage() {
       // gymId는 JWT 토큰에서 서버가 자동으로 추출하므로 파라미터로 전달하지 않음
       const response = await getMembersApi();
 
-      if (process.env.NEXT_PUBLIC_APP_ENV === "development" || process.env.NODE_ENV === "development") {
-        console.log("회원 목록 조회 응답:", response);
-      }
+      console.log("회원 목록 조회 응답:", response);
 
       // 응답 구조에 따라 배열 추출
       let membersArray: any[] = [];
@@ -102,6 +109,18 @@ export default function ListPage() {
           const height = typeof member.height === "string" ? parseFloat(member.height) : member.height || 0;
           const weight = typeof member.weight === "string" ? parseFloat(member.weight) : member.weight || 0;
 
+          // createdAt 처리 (mounted 후에만 Date 객체 사용)
+          let createdAt: string;
+          if (member.createdAt) {
+            if (typeof member.createdAt === "string") {
+              createdAt = member.createdAt;
+            } else {
+              createdAt = new Date(member.createdAt).toISOString();
+            }
+          } else {
+            createdAt = new Date().toISOString();
+          }
+
           return {
             id: member.id?.toString() || `member_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
             name: member.name || "",
@@ -110,33 +129,38 @@ export default function ListPage() {
             height: height,
             weight: weight,
             notes: member.notes || undefined,
-            createdAt: member.createdAt ? (typeof member.createdAt === "string" ? member.createdAt : new Date(member.createdAt).toISOString()) : new Date().toISOString(),
+            createdAt: createdAt,
           };
         });
         setMembers(convertedMembers);
       } else {
-        if (process.env.NEXT_PUBLIC_APP_ENV === "development" || process.env.NODE_ENV === "development") {
-          console.warn("회원 목록이 배열이 아닙니다:", response);
-        }
+        console.warn("회원 목록이 배열이 아닙니다:", response);
         setMembers([]);
       }
-    } catch (error) {
-      if (process.env.NEXT_PUBLIC_APP_ENV === "development" || process.env.NODE_ENV === "development") {
-        console.error("회원 목록 조회 실패:", error);
-      }
+    } catch (error: any) {
+      console.error("회원 목록 조회 실패:", error);
+      console.error("에러 상세:", {
+        message: error.message,
+        response: error.response?.data,
+        status: error.response?.status,
+      });
+      // 에러 발생 시 빈 배열로 설정
+      setMembers([]);
     } finally {
       setIsLoading(false);
     }
   };
 
-  // 회원 목록 조회
+  // 회원 목록 조회 (mounted 후에만 실행)
   useEffect(() => {
+    if (!mounted) return;
     fetchMembers();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isLoggedIn, devMode]);
+  }, [mounted, isLoggedIn, devMode]);
 
   // 로그인하지 않은 경우 아무것도 렌더링하지 않음 (개발 모드 제외)
-  if (!isLoggedIn && !devMode) {
+  // mounted 체크 후에만 실행
+  if (mounted && !isLoggedIn && !devMode) {
     return null;
   }
 

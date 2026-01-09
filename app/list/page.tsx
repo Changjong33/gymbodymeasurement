@@ -97,11 +97,6 @@ export default function ListPage() {
     }
   }, [mounted, isLoggedIn, devMode, router]);
 
-  // [3] 서버 사이드 렌더링 시 아무것도 렌더링하지 않음 (모든 Hook 선언 후)
-  if (!mounted || typeof window === "undefined") {
-    return null;
-  }
-
   // [4] 회원 목록 조회 함수 - API 호출 전 필수 값 체크 강화
   const fetchMembers = async () => {
     // 클라이언트 사이드에서만 실행

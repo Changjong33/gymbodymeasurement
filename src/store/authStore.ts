@@ -25,6 +25,22 @@ const devUser = {
   email: "dev@test.com",
 };
 
+// sessionStorage 어댑터 생성 (브라우저 종료 시 자동 삭제)
+const sessionStorageAdapter = {
+  getItem: (name: string): string | null => {
+    if (typeof window === "undefined") return null;
+    return sessionStorage.getItem(name);
+  },
+  setItem: (name: string, value: string): void => {
+    if (typeof window === "undefined") return;
+    sessionStorage.setItem(name, value);
+  },
+  removeItem: (name: string): void => {
+    if (typeof window === "undefined") return;
+    sessionStorage.removeItem(name);
+  },
+};
+
 export const useAuthStore = create<AuthState>()(
   persist(
     (set, get) => ({
@@ -35,7 +51,18 @@ export const useAuthStore = create<AuthState>()(
       gymId: null,
       login: (ownerName: string, email: string, token?: string, gymId?: number) => 
         set({ isLoggedIn: true, ownerName, email, token: token || null, gymId: gymId || null }),
-      logout: () => set({ isLoggedIn: false, ownerName: null, email: null, token: null, gymId: null }),
+      logout: () => {
+        set({ isLoggedIn: false, ownerName: null, email: null, token: null, gymId: null });
+        // sessionStorage에서 인증 정보 제거
+        if (typeof window !== "undefined") {
+          sessionStorage.removeItem("auth-storage");
+          sessionStorage.removeItem("accessToken");
+          sessionStorage.removeItem("refreshToken");
+          // 기존 localStorage에 남아있을 수 있는 토큰도 정리
+          localStorage.removeItem("accessToken");
+          localStorage.removeItem("refreshToken");
+        }
+      },
       isDevMode: () => isDevMode(),
       getEffectiveAuth: () => {
         const state = get();
@@ -62,6 +89,7 @@ export const useAuthStore = create<AuthState>()(
     }),
     {
       name: "auth-storage",
+      storage: sessionStorageAdapter,
     }
   )
 );

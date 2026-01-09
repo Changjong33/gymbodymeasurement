@@ -81,19 +81,19 @@ export default function EvaluationModal({ evaluationResult, apiResults, selected
           {/* 상단 영역: 차트 2개 + 회원 정보 */}
           <div className="flex-shrink-0 grid grid-cols-12 gap-4 mb-4" style={{ height: "420px" }}>
             {/* 좌측: 차트 영역 (2개 차트 가로 배치) */}
-            <div className="col-span-8 flex gap-4">
+            <div className="col-span-8 flex gap-4 h-120">
               {selectedExerciseTypes.length > 0 ? (
                 selectedExerciseTypes.map((exerciseType) => {
                   const chartResults = getChartDataByType(exerciseType);
                   if (chartResults.length === 0) return null;
                   return (
-                    <div key={exerciseType} className="flex-1 bg-white border border-gray-200 rounded-lg p-3 flex flex-col">
+                    <div key={exerciseType} className=" flex-1 bg-white border border-gray-200 rounded-lg p-3 flex flex-col">
                       <MeasurementRadarChart results={chartResults} title={getChartTitle(exerciseType)} showDataLabels={true} exerciseType={exerciseType} />
                     </div>
                   );
                 })
               ) : (
-                <div className="flex-1 bg-white border border-gray-200 rounded-lg p-3 flex flex-col">
+                <div className=" flex-1 bg-white border border-gray-200 rounded-lg p-3 flex flex-col">
                   <MeasurementRadarChart results={apiResults} title="신체 부위별 운동 능력 차트" showDataLabels={true} />
                 </div>
               )}
@@ -101,18 +101,18 @@ export default function EvaluationModal({ evaluationResult, apiResults, selected
 
             {/* 우측: 회원 정보 카드 */}
             {member && (
-              <div className="col-span-4 bg-gradient-to-br from-blue-50 to-indigo-50 border-2 border-blue-200 rounded-lg p-5 flex flex-col">
+              <div className="col-span-4 bg-gradient-to-br from-blue-50 to-indigo-50 border-2 border-blue-200 rounded-lg p-5 flex flex-col" style={{ height: "210px" }}>
                 <h3 className="text-lg font-bold text-gray-800 mb-4">회원 정보</h3>
-                <div className="space-y-3 flex-1">
+                <div className="flex-1 grid grid-cols-2 ">
                   <div>
                     <div className="text-xs text-gray-500 mb-1">이름</div>
                     <div className="text-lg font-semibold text-gray-800">{member.name}</div>
                   </div>
+                  <div>
+                    <div className="text-xs text-gray-500 mb-1">성별</div>
+                    <div className="text-base font-semibold text-gray-800">{genderText}</div>
+                  </div>
                   <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <div className="text-xs text-gray-500 mb-1">성별</div>
-                      <div className="text-base font-semibold text-gray-800">{genderText}</div>
-                    </div>
                     <div>
                       <div className="text-xs text-gray-500 mb-1">나이</div>
                       <div className="text-base font-semibold text-gray-800">{member.age}세</div>
@@ -123,14 +123,6 @@ export default function EvaluationModal({ evaluationResult, apiResults, selected
                     <div className="text-base font-semibold text-gray-800">{member.weight}kg</div>
                   </div>
                 </div>
-                <div className="mt-4 pt-4 border-t border-blue-200">
-                  <button
-                    onClick={onClose}
-                    className="w-full bg-gradient-to-r from-green-400 to-green-600 text-white py-2 px-4 rounded-md font-semibold hover:from-green-500 hover:to-green-700 transition"
-                  >
-                    확인
-                  </button>
-                </div>
               </div>
             )}
           </div>
@@ -138,7 +130,7 @@ export default function EvaluationModal({ evaluationResult, apiResults, selected
           {/* 하단 영역: 레벨 도달 기준표 + 문제점 */}
           <div className="flex-1 min-h-0 grid grid-cols-12 gap-4">
             {/* 좌측: 레벨 도달 기준표 */}
-            <div className="col-span-8 bg-white border border-gray-200 rounded-lg p-4 overflow-hidden flex flex-col">
+            <div className="col-span-8 bg-white border border-gray-200 rounded-lg p-4 overflow-hidden flex flex-col h-[298px]">
               <div className="flex items-center gap-3">
                 <h3 className="text-lg font-bold text-gray-800 mb-3">레벨 도달 기준표</h3>
                 {member && (
@@ -148,7 +140,7 @@ export default function EvaluationModal({ evaluationResult, apiResults, selected
                 )}
               </div>
               <div className="flex-1 overflow-auto">
-                <div className="overflow-x-auto">
+                <div className="overflow-x-auto h-42">
                   <table className="w-full text-sm border-collapse">
                     <thead>
                       <tr className="bg-gray-50 border-b-2 border-gray-300">
@@ -179,11 +171,11 @@ export default function EvaluationModal({ evaluationResult, apiResults, selected
             </div>
 
             {/* 우측: 문제점 표시 영역 */}
-            <div className="col-span-4 bg-white border-2 border-gray-200 rounded-lg p-4 flex flex-col">
+            <div className="col-span-4 bg-white border-2 border-gray-200 rounded-lg p-4 flex flex-col h-[298px]">
               <h3 className="text-lg font-bold text-gray-800 mb-3">관찰된 문제점</h3>
               <div className="flex-1 overflow-y-auto">
                 {allIssues.length > 0 ? (
-                  <div className="space-y-3">
+                  <div className="space-y-3 grid grid-cols-2 gap-2">
                     {allIssues.map((item, index) => (
                       <div key={index} className="border-b border-gray-200 pb-2 last:border-0">
                         <div className="text-sm font-semibold text-gray-700 mb-1">{item.exerciseName}</div>

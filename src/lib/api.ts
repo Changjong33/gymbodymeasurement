@@ -4,6 +4,13 @@ import { useAuthStore } from "@/store/authStore";
 // API 기본 URL (환경변수가 없을 경우 기본값 사용)
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "https://portfolio-fitspec.onrender.com";
 
+// 앱 시작 시 기존 localStorage의 토큰 정리 (보안 강화)
+if (typeof window !== "undefined") {
+  // localStorage에 남아있을 수 있는 기존 토큰 제거
+  localStorage.removeItem("accessToken");
+  localStorage.removeItem("refreshToken");
+}
+
 export const api = axios.create({
   baseURL: API_BASE_URL,
   timeout: 10000, // 10초 타임아웃 추가
@@ -14,7 +21,7 @@ api.interceptors.request.use(
   (config) => {
     // 클라이언트 사이드에서만 실행
     if (typeof window !== "undefined") {
-      const token = localStorage.getItem("accessToken");
+      const token = sessionStorage.getItem("accessToken");
       if (token) {
         config.headers.Authorization = `Bearer ${token}`;
         devLog("토큰 추가됨:", token.substring(0, 20) + "...");
@@ -55,7 +62,7 @@ let refreshPromise: Promise<string | null> | null = null;
 const getRefreshTokenFromStorage = (): string | null => {
   if (typeof window === "undefined") return null;
   try {
-    return localStorage.getItem("refreshToken");
+    return sessionStorage.getItem("refreshToken");
   } catch {
     return null;
   }
@@ -65,10 +72,10 @@ const saveTokensToStorage = (accessToken?: string, refreshToken?: string) => {
   if (typeof window === "undefined") return;
   try {
     if (accessToken) {
-      localStorage.setItem("accessToken", accessToken);
+      sessionStorage.setItem("accessToken", accessToken);
     }
     if (refreshToken) {
-      localStorage.setItem("refreshToken", refreshToken);
+      sessionStorage.setItem("refreshToken", refreshToken);
     }
   } catch (e) {
     devError("토큰 저장 실패:", e);
@@ -78,8 +85,8 @@ const saveTokensToStorage = (accessToken?: string, refreshToken?: string) => {
 const clearTokensAndLogout = () => {
   if (typeof window === "undefined") return;
   try {
-    localStorage.removeItem("accessToken");
-    localStorage.removeItem("refreshToken");
+    sessionStorage.removeItem("accessToken");
+    sessionStorage.removeItem("refreshToken");
   } catch (e) {
     devError("토큰 제거 실패:", e);
   }

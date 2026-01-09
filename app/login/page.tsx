@@ -95,18 +95,18 @@ export default function LoginPage() {
         return;
       }
 
-      // 액세스 토큰 / 리프레시 토큰을 로컬스토리지에 저장
+      // 액세스 토큰 / 리프레시 토큰을 세션스토리지에 저장 (브라우저 종료 시 자동 삭제)
       if (typeof window !== "undefined") {
         try {
           if (token) {
-            localStorage.setItem("accessToken", token);
+            sessionStorage.setItem("accessToken", token);
           }
           if (refreshToken) {
-            localStorage.setItem("refreshToken", refreshToken);
+            sessionStorage.setItem("refreshToken", refreshToken);
           }
         } catch (storageError) {
           if (process.env.NEXT_PUBLIC_APP_ENV === "development" || process.env.NODE_ENV === "development") {
-            console.warn("토큰 로컬스토리지 저장 실패:", storageError);
+            console.warn("토큰 세션스토리지 저장 실패:", storageError);
           }
         }
       }

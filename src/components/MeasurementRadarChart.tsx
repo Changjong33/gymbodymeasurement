@@ -89,7 +89,7 @@ const categoryIdToExerciseName = (categoryId: number): string | null => {
     2: "풀업",
     3: "숄더프레스",
     4: "바벨 스쿼트",
-    5: "윗몸일으키기",
+    5: "윗몸",
     6: "바벨 로우",
     7: "데드리프트",
     8: "푸쉬업",
@@ -102,6 +102,24 @@ const categoryIdToExerciseName = (categoryId: number): string | null => {
     15: "발목 가동성",
   };
   return mapping[categoryId] || null;
+};
+
+// 점수를 레벨 텍스트로 변환 (유연성 차트용)
+const scoreToLevelText = (score: number): string => {
+  switch (score) {
+    case 5:
+      return "매우좋음";
+    case 4:
+      return "좋음";
+    case 3:
+      return "보통";
+    case 2:
+      return "나쁨";
+    case 1:
+      return "매우나쁨";
+    default:
+      return "-";
+  }
 };
 
 // 운동 타입별 labels 정의
@@ -131,12 +149,12 @@ const convertResultsToRadarData = (results?: MeasurementResult[], exerciseType?:
 
   // 부위별 점수 및 실제 데이터 그룹화 (동적으로 생성)
   const bodyPartScores: Record<string, number[]> = {};
-  const bodyPartData: Record<string, { exerciseName: string; value: number; unit: string }> = {};
+  const bodyPartData: Record<string, { exerciseName: string; value: number; unit: string; score: number }> = {};
 
   // labels에 따라 초기화
   labels.forEach((label) => {
     bodyPartScores[label] = [];
-    bodyPartData[label] = { exerciseName: "", value: 0, unit: "" };
+    bodyPartData[label] = { exerciseName: "", value: 0, unit: "", score: 0 };
   });
 
   // 우선순위: 각 부위별로 대표 운동 선택 (운동 타입별)
@@ -204,6 +222,7 @@ const convertResultsToRadarData = (results?: MeasurementResult[], exerciseType?:
               exerciseName,
               value: result.value,
               unit: result.unit,
+              score: result.score,
             };
           }
         } else if (!bodyPartData[bodyPart].exerciseName) {
@@ -212,6 +231,7 @@ const convertResultsToRadarData = (results?: MeasurementResult[], exerciseType?:
             exerciseName,
             value: result.value,
             unit: result.unit,
+            score: result.score,
           };
         }
       }
@@ -310,13 +330,38 @@ export default function MeasurementRadarChart({ results, title, showDataLabels =
                   </div>
                 );
               }
+              // 유연성 차트의 경우 다른 형식으로 표시
+              const isFlexibility = exerciseType === "flexibility" || exerciseType === "aerobic";
+              if (isFlexibility && dataInfo.unit === "level") {
+                return (
+                  <div key={bodyPart} className="text-center">
+                    <div className="font-medium text-gray-700">{dataInfo.exerciseName}</div>
+                    <div className="text-gray-600">{scoreToLevelText(dataInfo.score)}</div>
+                  </div>
+                );
+              }
+              // 맨몸운동 차트의 경우 3줄 형식으로 표시
+              const isBodyweight = exerciseType === "bodyweight";
+              if (isBodyweight) {
+                return (
+                  <div key={bodyPart} className="text-center">
+                    <div className="font-medium text-gray-700">{bodyPart}</div>
+                    <div className="text-gray-600">{dataInfo.exerciseName}</div>
+                    <div className="text-gray-600">
+                      {dataInfo.value}
+                      {dataInfo.unit === "reps" ? "회" : dataInfo.unit === "kg" ? "kg" : ""}
+                    </div>
+                  </div>
+                );
+              }
+              // 웨이트 운동 차트 형식
               return (
                 <div key={bodyPart} className="text-center">
                   <div className="font-medium text-gray-700">{bodyPart}</div>
                   <div className="text-gray-600">
                     {dataInfo.exerciseName}
                     {dataInfo.unit === "level" ? (
-                      <span className="ml-1">(으악 {dataInfo.value})</span>
+                      <span className="ml-1">({dataInfo.value})</span>
                     ) : (
                       <>
                         {" "}

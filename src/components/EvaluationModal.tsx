@@ -15,6 +15,18 @@ interface EvaluationModalProps {
   onClose: () => void;
 }
 
+// 레벨 기준표 행 데이터 타입
+interface LevelStandardRow {
+  categoryId: number;
+  exerciseName: string;
+  unit: string;
+  beginner: number;
+  novice: number;
+  intermediate: number;
+  advanced: number;
+  elite: number;
+}
+
 // 운동 타입별 categoryId 매핑
 const getCategoryIdsByType = (exerciseType: string): number[] => {
   const typeMap: Record<string, number[]> = {
@@ -48,19 +60,30 @@ export default function EvaluationModal({ results = [], selectedExerciseTypes = 
   };
 
   // adjustedLevels를 사용하여 레벨 기준표 생성
-  const levelStandards = useMemo(() => {
+  const levelStandards = useMemo((): LevelStandardRow[] => {
     if (!results || results.length === 0) return [];
 
-    return results.map((result) => {
-      const adjustedLevels = result.adjustedLevels;
-      const unitText = result.unit === "reps" ? "회" : result.unit === "kg" ? "kg" : "";
+    return results
+      .filter((result) => {
+        // adjustedLevels가 있는 경우만 포함
+        return result.adjustedLevels != null && typeof result.adjustedLevels === "object";
+      })
+      .map((result) => {
+        const adjustedLevels = result.adjustedLevels!;
+        // unit 변환: "reps" -> "회", "kg" -> "kg", 기타 -> ""
+        const unitText = result.unit === "reps" ? "회" : result.unit === "kg" ? "kg" : result.unit || "";
 
-      return {
-        exerciseName: result.exerciseName,
-        unit: unitText,
-        levels: [{ value: adjustedLevels.beginner }, { value: adjustedLevels.novice }, { value: adjustedLevels.intermediate }, { value: adjustedLevels.advanced }, { value: adjustedLevels.elite }],
-      };
-    });
+        return {
+          categoryId: result.categoryId,
+          exerciseName: result.exerciseName || "",
+          unit: unitText,
+          beginner: adjustedLevels?.beginner ?? 0,
+          novice: adjustedLevels?.novice ?? 0,
+          intermediate: adjustedLevels?.intermediate ?? 0,
+          advanced: adjustedLevels?.advanced ?? 0,
+          elite: adjustedLevels?.elite ?? 0,
+        };
+      });
   }, [results]);
 
   return (
@@ -123,14 +146,14 @@ export default function EvaluationModal({ results = [], selectedExerciseTypes = 
                     </thead>
                     <tbody>
                       {levelStandards.length > 0 ? (
-                        levelStandards.map((standard, index) => (
-                          <tr key={index} className="border-b border-gray-200 hover:bg-gray-50">
+                        levelStandards.map((standard) => (
+                          <tr key={standard.categoryId} className="border-b border-gray-200 hover:bg-gray-50">
                             <td className="px-3 py-2 font-medium text-gray-800">{standard.exerciseName}</td>
-                            {standard.levels.map((level, levelIndex) => (
-                              <td key={levelIndex} className="px-3 py-2 text-center text-gray-700">
-                                {level.value > 0 ? `${level.value}${standard.unit}` : "-"}
-                              </td>
-                            ))}
+                            <td className="px-3 py-2 text-center text-gray-700">{standard.beginner > 0 ? `${standard.beginner}${standard.unit}` : "-"}</td>
+                            <td className="px-3 py-2 text-center text-gray-700">{standard.novice > 0 ? `${standard.novice}${standard.unit}` : "-"}</td>
+                            <td className="px-3 py-2 text-center text-gray-700">{standard.intermediate > 0 ? `${standard.intermediate}${standard.unit}` : "-"}</td>
+                            <td className="px-3 py-2 text-center text-gray-700">{standard.advanced > 0 ? `${standard.advanced}${standard.unit}` : "-"}</td>
+                            <td className="px-3 py-2 text-center text-gray-700">{standard.elite > 0 ? `${standard.elite}${standard.unit}` : "-"}</td>
                           </tr>
                         ))
                       ) : (

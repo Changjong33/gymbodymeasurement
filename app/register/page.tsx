@@ -156,10 +156,16 @@ export default function RegisterPage() {
       setInjuries([]);
       setShowMoreInjuries(false);
 
-      // 3초 후 성공 메시지 숨기기
-      setTimeout(() => {
-        setShowSuccess(false);
-      }, 3000);
+      // 확인 다이얼로그 표시
+      const shouldNavigate = window.confirm("회원정보등록을 완료하면 회원측정페이지로 이동하시겠습니까?");
+      if (shouldNavigate) {
+        router.push("/measurement");
+      } else {
+        // 3초 후 성공 메시지 숨기기
+        setTimeout(() => {
+          setShowSuccess(false);
+        }, 3000);
+      }
     } catch (error: any) {
       if (process.env.NEXT_PUBLIC_APP_ENV === "development" || process.env.NODE_ENV === "development") {
         console.error("=== 회원 등록 에러 ===");

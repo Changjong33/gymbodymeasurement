@@ -27,15 +27,24 @@ export default function ListPage() {
   const [showHistoryModal, setShowHistoryModal] = useState(false);
   const [isLoadingHistory, setIsLoadingHistory] = useState(false);
   const [historyError, setHistoryError] = useState<string | null>(null);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [devMode, setDevMode] = useState(false);
 
   // Hydration 에러 방지: mounted 패턴
   useEffect(() => {
     setMounted(true);
-  }, []);
 
-  // 실제 인증 상태 가져오기 (개발 모드 우회 포함)
-  const { isLoggedIn } = getEffectiveAuth();
-  const devMode = isDevMode();
+    // mounted 후에만 인증 상태 확인
+    try {
+      const auth = getEffectiveAuth();
+      setIsLoggedIn(auth.isLoggedIn);
+      setDevMode(isDevMode());
+    } catch (error) {
+      console.error("인증 상태 확인 실패:", error);
+      setIsLoggedIn(false);
+      setDevMode(false);
+    }
+  }, []);
 
   // 서버 사이드 렌더링 시 아무것도 렌더링하지 않음
   if (!mounted || typeof window === "undefined") {
@@ -48,22 +57,37 @@ export default function ListPage() {
   // 로그인 체크 (개발 모드에서는 우회)
   useEffect(() => {
     if (!mounted) return;
-    if (!isLoggedIn && !devMode) {
+    try {
+      const auth = getEffectiveAuth();
+      const currentDevMode = isDevMode();
+      if (!auth.isLoggedIn && !currentDevMode) {
+        router.push("/login");
+      }
+    } catch (error) {
+      console.error("로그인 체크 실패:", error);
       router.push("/login");
     }
-  }, [mounted, isLoggedIn, devMode, router]);
+  }, [mounted, router]);
 
   // 회원 목록 조회 함수
   const fetchMembers = async () => {
     // 클라이언트 사이드에서만 실행
     if (typeof window === "undefined" || !mounted) return;
-    if (!isLoggedIn && !devMode) return;
 
-    setIsLoading(true);
     try {
+      // 인증 상태 다시 확인
+      const auth = getEffectiveAuth();
+      const currentDevMode = isDevMode();
+
+      if (!auth.isLoggedIn && !currentDevMode) {
+        return;
+      }
+
+      setIsLoading(true);
+
       // accessToken 체크
       const accessToken = sessionStorage.getItem("accessToken");
-      if (!accessToken && !devMode) {
+      if (!accessToken && !currentDevMode) {
         console.warn("accessToken 없음 → 회원 목록 조회 중단");
         setMembers([]);
         setIsLoading(false);
@@ -71,10 +95,10 @@ export default function ListPage() {
       }
 
       // 로그인한 계정의 gymId 가져오기
-      const { gymId: authGymId } = getEffectiveAuth();
+      const authGymId = auth.gymId;
 
       // gymId가 없으면 회원 조회 불가
-      if (!authGymId && !devMode) {
+      if (!authGymId && !currentDevMode) {
         console.error("gymId가 없습니다. 로그인 상태를 확인해주세요.");
         setMembers([]);
         setIsLoading(false);
@@ -154,14 +178,34 @@ export default function ListPage() {
   // 회원 목록 조회 (mounted 후에만 실행)
   useEffect(() => {
     if (!mounted) return;
-    fetchMembers();
+
+    // 인증 상태 확인 후 API 호출
+    try {
+      const auth = getEffectiveAuth();
+      const currentDevMode = isDevMode();
+
+      if (auth.isLoggedIn || currentDevMode) {
+        fetchMembers();
+      }
+    } catch (error) {
+      console.error("회원 목록 조회 초기화 실패:", error);
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [mounted, isLoggedIn, devMode]);
+  }, [mounted]);
 
   // 로그인하지 않은 경우 아무것도 렌더링하지 않음 (개발 모드 제외)
   // mounted 체크 후에만 실행
-  if (mounted && !isLoggedIn && !devMode) {
-    return null;
+  if (mounted) {
+    try {
+      const auth = getEffectiveAuth();
+      const currentDevMode = isDevMode();
+      if (!auth.isLoggedIn && !currentDevMode) {
+        return null;
+      }
+    } catch (error) {
+      console.error("인증 상태 확인 실패:", error);
+      return null;
+    }
   }
 
   const handleDelete = async (id: string, name: string) => {

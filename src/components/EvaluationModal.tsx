@@ -155,16 +155,14 @@ export default function EvaluationModal({ evaluationResult, apiResults, apiRespo
           <div className="flex-1 min-h-0 grid grid-cols-12 gap-4">
             {/* 좌측: 레벨 도달 기준표 */}
             <div className="col-span-8 bg-white border border-gray-200 rounded-lg p-4 overflow-hidden flex flex-col h-[298px]">
-              <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-3 mb-3">
                 <h3 className="text-lg font-bold text-gray-800">레벨 도달 기준표</h3>
-                {totalSummary && (
-                  <div className="text-sm text-gray-600">
-                    전체 레벨: <span className="font-semibold text-blue-700">{totalSummary.overallLevel}</span> | 평균 점수:{" "}
-                    <span className="font-semibold text-blue-700">{totalSummary.averageScore.toFixed(1)}점</span>
+                {member && (
+                  <div className="text-xs text-gray-600">
+                    기준: {genderText}, {member.age}세, {member.weight}kg
                   </div>
                 )}
               </div>
-              {totalSummary && totalSummary.description && <div className="text-xs text-gray-600 mb-2 p-2 bg-blue-50 rounded border border-blue-200">{totalSummary.description}</div>}
               <div className="flex-1 overflow-auto">
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm border-collapse">

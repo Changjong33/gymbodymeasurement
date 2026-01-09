@@ -355,12 +355,6 @@ export default function MeasurementRadarChart({ results, title, showDataLabels =
                       {dataInfo.value}
                       {unitText}
                     </div>
-                    {dataInfo.nextLevelTarget !== undefined && dataInfo.nextLevelTarget > 0 && (
-                      <div className="text-xs text-gray-500 mt-1">
-                        다음 단계: {dataInfo.nextLevelTarget}
-                        {unitText} {dataInfo.remaining !== undefined && dataInfo.remaining > 0 && `(${dataInfo.remaining}${unitText} 남음)`}
-                      </div>
-                    )}
                   </div>
                 );
               }
@@ -373,12 +367,6 @@ export default function MeasurementRadarChart({ results, title, showDataLabels =
                     {dataInfo.value}
                     {unitText}
                   </div>
-                  {dataInfo.nextLevelTarget !== undefined && dataInfo.nextLevelTarget > 0 && (
-                    <div className="text-xs text-gray-500 mt-1">
-                      다음 단계: {dataInfo.nextLevelTarget}
-                      {unitText} {dataInfo.remaining !== undefined && dataInfo.remaining > 0 && `(${dataInfo.remaining}${unitText} 남음)`}
-                    </div>
-                  )}
                 </div>
               );
             })}

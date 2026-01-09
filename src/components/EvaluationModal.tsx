@@ -182,11 +182,11 @@ export default function EvaluationModal({ results = [], selectedExerciseTypes = 
                           levelStandards.map((standard) => (
                             <tr key={standard.categoryId} className="border-b border-gray-200 hover:bg-gray-50">
                               <td className="px-3 py-2 font-medium text-gray-800">{standard.exerciseName}</td>
-                              <td className="px-3 py-2 text-center text-gray-700">{standard.beginner > 0 ? `${standard.beginner}${standard.unit}` : "-"}</td>
-                              <td className="px-3 py-2 text-center text-gray-700">{standard.novice > 0 ? `${standard.novice}${standard.unit}` : "-"}</td>
-                              <td className="px-3 py-2 text-center text-gray-700">{standard.intermediate > 0 ? `${standard.intermediate}${standard.unit}` : "-"}</td>
-                              <td className="px-3 py-2 text-center text-gray-700">{standard.advanced > 0 ? `${standard.advanced}${standard.unit}` : "-"}</td>
-                              <td className="px-3 py-2 text-center text-gray-700">{standard.elite > 0 ? `${standard.elite}${standard.unit}` : "-"}</td>
+                              <td className="px-3 py-2 text-center text-gray-700">{standard.beginner > 0 ? `${Math.floor(standard.beginner)}${standard.unit}` : "-"}</td>
+                              <td className="px-3 py-2 text-center text-gray-700">{standard.novice > 0 ? `${Math.floor(standard.novice)}${standard.unit}` : "-"}</td>
+                              <td className="px-3 py-2 text-center text-gray-700">{standard.intermediate > 0 ? `${Math.floor(standard.intermediate)}${standard.unit}` : "-"}</td>
+                              <td className="px-3 py-2 text-center text-gray-700">{standard.advanced > 0 ? `${Math.floor(standard.advanced)}${standard.unit}` : "-"}</td>
+                              <td className="px-3 py-2 text-center text-gray-700">{standard.elite > 0 ? `${Math.floor(standard.elite)}${standard.unit}` : "-"}</td>
                             </tr>
                           ))
                         ) : (

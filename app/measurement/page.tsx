@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, FormEvent, useEffect, useMemo } from "react";
+import { useState, FormEvent, useEffect, useMemo, useRef } from "react";
 import { useMemberStore } from "@/store/memberStore";
 import { useMeasurementStore } from "@/store/measurementStore";
 import { useAuthStore } from "@/store/authStore";
@@ -34,6 +34,10 @@ export default function MeasurementPage() {
   const [apiResponseResults, setApiResponseResults] = useState<MeasurementResult[]>([]);
   const [formValid, setFormValid] = useState(false);
   const [currentMeasurementData, setCurrentMeasurementData] = useState<any>(null);
+  const [missingCategoryIds, setMissingCategoryIds] = useState<Set<number>>(new Set());
+
+  // categoryId 기준 input ref 매핑
+  const inputRefs = useRef<Record<number, HTMLInputElement | null>>({});
 
   // 실제 인증 상태 가져오기 (개발 모드 우회 포함)
   const { isLoggedIn } = getEffectiveAuth();
@@ -130,7 +134,7 @@ export default function MeasurementPage() {
     setFormValid(false); // 폼 닫을 때 검증 상태 초기화
   };
 
-  // 폼 입력 값 변경 시 실시간 검증
+  // 폼 입력 값 변경 시 실시간 검증 및 강조 해제
   const handleFormChange = (e: React.FormEvent<HTMLFormElement>) => {
     // 이벤트 버블링으로 모든 input 변경 감지
     const target = e.target as HTMLElement;
@@ -138,10 +142,75 @@ export default function MeasurementPage() {
       const form = e.currentTarget;
       const formData = new FormData(form);
       setFormValid(validateRequiredFields(formData, false));
+
+      // 입력된 필드의 categoryId 찾아서 강조 해제
+      const inputName = (target as HTMLInputElement).name;
+      const categoryInfo = REQUIRED_CATEGORIES.find((cat) => cat.fieldName === inputName);
+
+      if (categoryInfo && missingCategoryIds.has(categoryInfo.categoryId)) {
+        // 값이 입력되었는지 확인
+        const value = formData.get(inputName);
+        let hasValue = false;
+
+        if (categoryInfo.categoryId >= 11 && categoryInfo.categoryId <= 15) {
+          // 유연성은 radio 버튼
+          hasValue = !!value && typeof value === "string" && value.trim() !== "";
+        } else {
+          // 숫자 필드
+          const numValue = value ? parseFloat(value as string) : 0;
+          hasValue = !!value && typeof value === "string" && value.trim() !== "" && numValue !== 0 && !isNaN(numValue);
+        }
+
+        if (hasValue) {
+          // 강조 해제
+          setMissingCategoryIds((prev) => {
+            const newSet = new Set(prev);
+            newSet.delete(categoryInfo.categoryId);
+            return newSet;
+          });
+        }
+      }
     }
   };
 
-  // 선택된 운동 타입에 따른 필수 필드 검증
+  // 필수 측정 항목 목록 (categoryId 기준)
+  const REQUIRED_CATEGORIES = useMemo(() => {
+    const required: Array<{ categoryId: number; name: string; fieldName: string }> = [];
+
+    if (selectedExerciseTypes.includes("weight")) {
+      required.push(
+        { categoryId: 4, name: "바벨 스쿼트", fieldName: "squatKg" },
+        { categoryId: 1, name: "벤치프레스", fieldName: "benchKg" },
+        { categoryId: 3, name: "숄더프레스", fieldName: "shoulderKg" },
+        { categoryId: 6, name: "바벨 로우", fieldName: "barbellRowKg" },
+        { categoryId: 7, name: "데드리프트", fieldName: "deadliftKg" }
+      );
+    }
+
+    if (selectedExerciseTypes.includes("bodyweight")) {
+      required.push(
+        { categoryId: 2, name: "풀업", fieldName: "pullupReps" },
+        { categoryId: 5, name: "윗몸일으키기", fieldName: "situpReps" },
+        { categoryId: 8, name: "푸쉬업", fieldName: "pushupReps" },
+        { categoryId: 9, name: "스쿼트", fieldName: "bodyweightSquatReps" },
+        { categoryId: 10, name: "버피", fieldName: "burpeeReps" }
+      );
+    }
+
+    if (selectedExerciseTypes.includes("flexibility")) {
+      required.push(
+        { categoryId: 11, name: "흉추 가동성", fieldName: "thoracicMobility" },
+        { categoryId: 12, name: "어깨 유연성", fieldName: "shoulderFlexibility" },
+        { categoryId: 13, name: "햄스트링", fieldName: "hamstring" },
+        { categoryId: 14, name: "고관절", fieldName: "hipMobility" },
+        { categoryId: 15, name: "발목 가동성", fieldName: "ankleMobility" }
+      );
+    }
+
+    return required;
+  }, [selectedExerciseTypes]);
+
+  // 선택된 운동 타입에 따른 필수 필드 검증 (기존 함수 유지 - 실시간 검증용)
   const validateRequiredFields = (formData: FormData, showAlert = true): boolean => {
     // 웨이트 트레이닝 필수 필드
     const weightRequiredFields = [
@@ -212,6 +281,52 @@ export default function MeasurementPage() {
     return true;
   };
 
+  // categoryId 기준으로 누락된 항목 찾기
+  const findMissingCategoryIds = (formData: FormData): number[] => {
+    const missing: number[] = [];
+
+    REQUIRED_CATEGORIES.forEach(({ categoryId, fieldName }) => {
+      const value = formData.get(fieldName);
+
+      // 유연성은 radio 버튼이므로 문자열 체크
+      if (categoryId >= 11 && categoryId <= 15) {
+        if (!value || (typeof value === "string" && value.trim() === "")) {
+          missing.push(categoryId);
+        }
+      } else {
+        // 숫자 필드는 null, undefined, 0, 빈 문자열 체크
+        const numValue = value ? parseFloat(value as string) : 0;
+        if (!value || (typeof value === "string" && value.trim() === "") || numValue === 0 || isNaN(numValue)) {
+          missing.push(categoryId);
+        }
+      }
+    });
+
+    return missing;
+  };
+
+  // 첫 번째 누락된 항목으로 스크롤 및 포커스
+  const focusFirstMissingInput = (missingCategoryIds: number[]) => {
+    if (missingCategoryIds.length === 0) return false;
+
+    const firstMissingCategoryId = missingCategoryIds[0];
+    const inputRef = inputRefs.current[firstMissingCategoryId];
+
+    if (inputRef) {
+      // 스크롤
+      inputRef.scrollIntoView({ behavior: "smooth", block: "center" });
+
+      // 포커스 (약간의 지연을 두어 스크롤 후 포커스)
+      setTimeout(() => {
+        inputRef.focus();
+      }, 300);
+
+      return true;
+    }
+
+    return false;
+  };
+
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
@@ -222,10 +337,22 @@ export default function MeasurementPage() {
 
     const formData = new FormData(e.currentTarget);
 
-    // 필수 필드 검증
-    if (!validateRequiredFields(formData)) {
+    // categoryId 기준으로 누락된 항목 찾기
+    const missing = findMissingCategoryIds(formData);
+
+    if (missing.length > 0) {
+      // 누락된 항목이 있으면 시각적 강조를 위한 state 업데이트
+      setMissingCategoryIds(new Set(missing));
+
+      // 첫 번째 누락된 항목으로 스크롤 및 포커스
+      focusFirstMissingInput(missing);
+
+      // API 호출하지 않음
       return;
     }
+
+    // 모든 필수 항목이 입력되었으면 강조 해제
+    setMissingCategoryIds(new Set());
 
     setIsSubmitting(true);
 
@@ -532,11 +659,31 @@ export default function MeasurementPage() {
                             </div>
                           </div>
                           <div className="space-y-6">
-                            {items.map(({ section, component: Component }, index) => (
-                              <div key={`${section.category}-${section.prefix}-${index}`} className="bg-white border border-gray-200 rounded-lg p-5 shadow-sm hover:shadow-md transition-shadow">
-                                <Component section={section} />
-                              </div>
-                            ))}
+                            {items.map(({ section, component: Component }, index) => {
+                              // categoryId 찾기
+                              const categoryInfo = REQUIRED_CATEGORIES.find((cat) => cat.fieldName === section.kgField);
+                              const categoryId = categoryInfo?.categoryId;
+                              const isMissing = categoryId ? missingCategoryIds.has(categoryId) : false;
+
+                              return (
+                                <div
+                                  key={`${section.category}-${section.prefix}-${index}`}
+                                  className={`bg-white border rounded-lg p-5 shadow-sm hover:shadow-md transition-shadow ${
+                                    isMissing ? "border-red-500 ring-2 ring-red-200 bg-red-50" : "border-gray-200"
+                                  }`}
+                                >
+                                  <Component
+                                    section={section}
+                                    inputRef={(el: HTMLInputElement | null) => {
+                                      if (categoryId) {
+                                        inputRefs.current[categoryId] = el;
+                                      }
+                                    }}
+                                    isMissing={isMissing}
+                                  />
+                                </div>
+                              );
+                            })}
                           </div>
                         </div>
                       );
@@ -553,7 +700,7 @@ export default function MeasurementPage() {
                 <div className="sticky bottom-0 bg-white pt-6 pb-2 -mx-8 px-8 border-t border-gray-200 mt-8">
                   <button
                     type="submit"
-                    disabled={isSubmitting || !selectedMemberId || !formValid}
+                    disabled={isSubmitting || !selectedMemberId}
                     className="w-full bg-gradient-to-r from-green-500 to-emerald-600 text-white text-lg font-semibold rounded-lg py-4 hover:from-green-600 hover:to-emerald-700 transition-all shadow-lg hover:shadow-xl disabled:bg-gray-300 disabled:cursor-not-allowed disabled:hover:from-gray-300 disabled:hover:to-gray-300 disabled:shadow-none"
                   >
                     {isSubmitting ? (

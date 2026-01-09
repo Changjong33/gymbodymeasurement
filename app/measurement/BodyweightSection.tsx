@@ -80,7 +80,7 @@ export const bodyweightSections: BodyweightSection[] = [
 ];
 
 // 맨몸운동 섹션 컴포넌트
-export default function BodyweightSection({ section }: { section: BodyweightSection }) {
+export default function BodyweightSection({ section, inputRef, isMissing = false }: { section: BodyweightSection; inputRef?: (el: HTMLInputElement | null) => void; isMissing?: boolean }) {
   return (
     <div className="mb-6">
       <h3 className="text-xl font-bold text-gray-800 mb-2">{section.title}</h3>
@@ -90,11 +90,14 @@ export default function BodyweightSection({ section }: { section: BodyweightSect
             횟수 (회)
           </label>
           <input
+            ref={inputRef}
             id={section.kgField}
             name={section.kgField}
             type="number"
             min="0"
-            className="w-full border border-gray-300 rounded-md px-3 py-2"
+            className={`w-full border rounded-md px-3 py-2 ${
+              isMissing ? "border-red-500 ring-2 ring-red-200 bg-red-50 focus:ring-red-500 focus:border-red-500" : "border-gray-300 focus:ring-blue-200 focus:border-blue-500"
+            }`}
             placeholder="횟수"
             onWheel={(e) => e.currentTarget.blur()}
           />

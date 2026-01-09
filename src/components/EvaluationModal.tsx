@@ -79,10 +79,25 @@ export default function EvaluationModal({ results = [], selectedExerciseTypes = 
           return null;
         }
 
+        // categoryId에 따라 unit 강제 설정
+        let unit = "";
+        // 맨몸운동 (2, 5, 8, 9, 10)은 모두 "회"
+        if ([2, 5, 8, 9, 10].includes(result.categoryId)) {
+          unit = "회";
+        }
+        // 웨이트 트레이닝 (1, 3, 4, 6, 7)은 모두 "kg"
+        else if ([1, 3, 4, 6, 7].includes(result.categoryId)) {
+          unit = "kg";
+        }
+        // 기타는 원래 unit 사용
+        else {
+          unit = result.unit === "reps" ? "회" : result.unit === "kg" ? "kg" : result.unit ?? "";
+        }
+
         return {
           categoryId: result.categoryId,
           exerciseName: result.exerciseName ?? "",
-          unit: result.unit === "reps" ? "회" : result.unit ?? "",
+          unit,
           beginner: levels.beginner ?? 0,
           novice: levels.novice ?? 0,
           intermediate: levels.intermediate ?? 0,
@@ -134,23 +149,30 @@ export default function EvaluationModal({ results = [], selectedExerciseTypes = 
           <div className="flex-1 flex flex-col overflow-hidden">
             {/* 상단 영역: 차트 */}
             <div className="flex-shrink-0 mb-4" style={{ height: "420px" }}>
-              <div className="flex gap-4 h-full">
-                {selectedExerciseTypes.length > 0 ? (
-                  selectedExerciseTypes.map((exerciseType) => {
+              {selectedExerciseTypes.length > 0 ? (
+                <div
+                  className="grid gap-4 h-full"
+                  style={{
+                    gridTemplateColumns: `repeat(${selectedExerciseTypes.length}, 1fr)`,
+                  }}
+                >
+                  {selectedExerciseTypes.map((exerciseType) => {
                     const chartResults = getChartDataByType(exerciseType);
                     if (chartResults.length === 0) return null;
                     return (
-                      <div key={exerciseType} className="flex-1 bg-white border border-gray-200 rounded-lg p-3 flex flex-col">
+                      <div key={exerciseType} className="bg-white border border-gray-200 rounded-lg p-3 flex flex-col min-w-0">
                         <MeasurementRadarChart results={chartResults} title={getChartTitle(exerciseType)} showDataLabels={true} exerciseType={exerciseType} />
                       </div>
                     );
-                  })
-                ) : (
-                  <div className="flex-1 bg-white border border-gray-200 rounded-lg p-3 flex flex-col">
+                  })}
+                </div>
+              ) : (
+                <div className="h-full">
+                  <div className="bg-white border border-gray-200 rounded-lg p-3 flex flex-col h-full">
                     <MeasurementRadarChart results={results} title="신체 부위별 운동 능력 차트" showDataLabels={true} />
                   </div>
-                )}
-              </div>
+                </div>
+              )}
             </div>
 
             {/* 하단 영역: 레벨 도달 기준표 */}

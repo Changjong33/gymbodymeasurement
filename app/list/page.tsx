@@ -5,6 +5,9 @@ import { useMemberStore, Member } from "@/store/memberStore";
 import { useAuthStore } from "@/store/authStore";
 import { useRouter } from "next/navigation";
 import { getMembersApi, updateMemberApi, deleteMemberApi } from "@/lib/api";
+import { getSavedMeasurementsByMemberId } from "@/lib/measurementStorage";
+import { SavedMeasurement } from "@/types/measurement";
+import EvaluationModal from "@/components/EvaluationModal";
 
 export default function ListPage() {
   const router = useRouter();
@@ -17,6 +20,10 @@ export default function ListPage() {
   const [showMoreInjuries, setShowMoreInjuries] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [selectedMemberForHistory, setSelectedMemberForHistory] = useState<Member | null>(null);
+  const [memberHistory, setMemberHistory] = useState<SavedMeasurement[]>([]);
+  const [selectedHistoryMeasurement, setSelectedHistoryMeasurement] = useState<SavedMeasurement | null>(null);
+  const [showHistoryModal, setShowHistoryModal] = useState(false);
 
   // 검색어에 따라 회원 필터링
   const filteredMembers = members.filter((member) => member.name.toLowerCase().includes(searchQuery.toLowerCase()));
@@ -289,6 +296,28 @@ export default function ListPage() {
     URL.revokeObjectURL(url);
   };
 
+  const handleViewHistory = (member: Member) => {
+    const history = getSavedMeasurementsByMemberId(member.id);
+    setSelectedMemberForHistory(member);
+    setMemberHistory(history);
+    setShowHistoryModal(true);
+  };
+
+  const handleCloseHistoryModal = () => {
+    setShowHistoryModal(false);
+    setSelectedMemberForHistory(null);
+    setMemberHistory([]);
+    setSelectedHistoryMeasurement(null);
+  };
+
+  const handleSelectHistoryDate = (measurement: SavedMeasurement) => {
+    setSelectedHistoryMeasurement(measurement);
+  };
+
+  const handleCloseEvaluation = () => {
+    setSelectedHistoryMeasurement(null);
+  };
+
   return (
     <div className="max-w-6xl mx-auto">
       <div className="mb-8">
@@ -385,6 +414,9 @@ export default function ListPage() {
                       <td className="py-3 px-4 text-gray-500 text-sm">{new Date(member.createdAt).toLocaleDateString("ko-KR")}</td>
                       <td className="py-3 px-4">
                         <div className="flex items-center gap-3">
+                          <button onClick={() => handleViewHistory(member)} className="text-green-500 hover:text-green-700 font-medium text-sm">
+                            측정이력
+                          </button>
                           <button onClick={() => handleEdit(member)} className="text-blue-500 hover:text-blue-700 font-medium text-sm">
                             수정
                           </button>
@@ -574,6 +606,69 @@ export default function ListPage() {
             </form>
           </div>
         </div>
+      )}
+
+      {/* 측정 이력 모달 */}
+      {showHistoryModal && selectedMemberForHistory && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-xl max-w-2xl w-full max-h-[80vh] flex flex-col">
+            <div className="flex items-center justify-between p-6 border-b border-gray-200">
+              <h2 className="text-2xl font-bold text-gray-800">{selectedMemberForHistory.name}님의 측정 이력</h2>
+              <button onClick={handleCloseHistoryModal} className="text-gray-400 hover:text-gray-600 text-2xl">
+                ×
+              </button>
+            </div>
+            <div className="flex-1 overflow-auto p-6">
+              {memberHistory.length === 0 ? (
+                <div className="text-center py-12 text-gray-500">
+                  <span className="text-4xl mb-3 block">📊</span>
+                  <p>측정 이력이 없습니다.</p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {memberHistory.map((measurement, index) => {
+                    const date = new Date(measurement.measuredAt);
+                    const formattedDate = date.toLocaleDateString("ko-KR", {
+                      year: "numeric",
+                      month: "long",
+                      day: "numeric",
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    });
+                    return (
+                      <button
+                        key={index}
+                        onClick={() => handleSelectHistoryDate(measurement)}
+                        className="w-full text-left bg-gray-50 hover:bg-blue-50 border border-gray-200 hover:border-blue-300 rounded-lg p-4 transition-all"
+                      >
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <div className="font-semibold text-gray-800">{formattedDate}</div>
+                            <div className="text-sm text-gray-600 mt-1">
+                              {measurement.selectedExerciseTypes?.map((type) => (type === "flexibility" ? "유연성" : type === "bodyweight" ? "맨몸운동" : "웨이트 트레이닝")).join(", ") || "측정 항목"}
+                            </div>
+                          </div>
+                          <div className="text-blue-500 font-medium">보기 →</div>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 과거 측정 결과 EvaluationModal */}
+      {selectedHistoryMeasurement && (
+        <EvaluationModal
+          results={selectedHistoryMeasurement.results}
+          selectedExerciseTypes={selectedHistoryMeasurement.selectedExerciseTypes || []}
+          member={selectedHistoryMeasurement.member}
+          measurementData={selectedHistoryMeasurement.measurementData}
+          onClose={handleCloseEvaluation}
+        />
       )}
     </div>
   );

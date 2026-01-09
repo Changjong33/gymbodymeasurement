@@ -17,6 +17,8 @@ import FlexibilitySection from "./FlexibilitySection";
 import MemberSelector from "@/components/MemberSelector";
 import ExerciseTypeSelector from "@/components/ExerciseTypeSelector";
 import EvaluationModal from "@/components/EvaluationModal";
+import { saveMeasurement } from "@/lib/measurementStorage";
+import { SavedMeasurement } from "@/types/measurement";
 
 export default function MeasurementPage() {
   const router = useRouter();
@@ -310,6 +312,27 @@ export default function MeasurementPage() {
       setIsSubmitting(false);
       setShowMeasurementForm(false);
 
+      // 측정 결과를 localStorage에 저장
+      if (allResults.length > 0 && selectedMember) {
+        const savedMeasurement: SavedMeasurement = {
+          memberId: selectedMemberId,
+          measuredAt: new Date().toISOString(),
+          results: allResults,
+          totalSummary: apiResponse?.data?.totalSummary,
+          selectedExerciseTypes: selectedExerciseTypes,
+          member: {
+            name: selectedMember.name,
+            age: selectedMember.age,
+            gender: selectedMember.gender,
+            height: selectedMember.height,
+            weight: selectedMember.weight,
+            notes: selectedMember.notes,
+          },
+          measurementData: measurementData,
+        };
+        saveMeasurement(savedMeasurement);
+      }
+
       // 결과가 있으면 모달 표시, 없으면 성공 메시지만 표시
       if (allResults.length > 0) {
         setShowEvaluation(true);
@@ -349,6 +372,26 @@ export default function MeasurementPage() {
         setApiResponseResults(flexibilityResults);
         setIsSubmitting(false);
         setShowMeasurementForm(false);
+
+        // 측정 결과를 localStorage에 저장 (에러 발생 시에도 저장)
+        if (flexibilityResults.length > 0 && selectedMember) {
+          const savedMeasurement: SavedMeasurement = {
+            memberId: selectedMemberId,
+            measuredAt: new Date().toISOString(),
+            results: flexibilityResults,
+            selectedExerciseTypes: selectedExerciseTypes,
+            member: {
+              name: selectedMember.name,
+              age: selectedMember.age,
+              gender: selectedMember.gender,
+              height: selectedMember.height,
+              weight: selectedMember.weight,
+              notes: selectedMember.notes,
+            },
+            measurementData: measurementData,
+          };
+          saveMeasurement(savedMeasurement);
+        }
 
         // 유연성 결과가 있으면 모달 표시, 없으면 성공 메시지만 표시
         if (flexibilityResults.length > 0) {

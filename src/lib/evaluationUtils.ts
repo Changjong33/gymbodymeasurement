@@ -43,7 +43,7 @@ export function getLevelName(score: number): string {
 }
 
 // 운동별 문제점 수집
-function collectIssuesByCategory(categoryId: number, measurementData: any, notes: string): string[] {
+export function collectIssuesByCategory(categoryId: number, measurementData: any, notes: string): string[] {
   const issues: string[] = [];
 
   switch (categoryId) {

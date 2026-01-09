@@ -31,6 +31,7 @@ export default function MeasurementPage() {
   const [showEvaluation, setShowEvaluation] = useState(false);
   const [apiResponseResults, setApiResponseResults] = useState<MeasurementResult[]>([]);
   const [formValid, setFormValid] = useState(false);
+  const [currentMeasurementData, setCurrentMeasurementData] = useState<any>(null);
 
   // 실제 인증 상태 가져오기 (개발 모드 우회 포함)
   const { isLoggedIn } = getEffectiveAuth();
@@ -279,6 +280,9 @@ export default function MeasurementPage() {
       // 로컬 스토어에 저장
       addMeasurement(measurementData);
 
+      // 모달에 표시하기 위해 measurementData 저장
+      setCurrentMeasurementData(measurementData);
+
       // 백엔드 응답 결과 저장 (API 응답이 있으면 사용, 없으면 빈 배열)
       const apiResults = apiResponse?.data?.results || [];
 
@@ -320,6 +324,9 @@ export default function MeasurementPage() {
       // 예상치 못한 오류 발생 시에도 데이터 저장 후 성공 메시지 표시
       try {
         addMeasurement(measurementData);
+
+        // 모달에 표시하기 위해 measurementData 저장
+        setCurrentMeasurementData(measurementData);
 
         // 유연성 데이터를 차트용 형식으로 변환 (에러 발생 시에도 표시)
         const flexibilityResults: MeasurementResult[] = selectedExerciseTypes.includes("flexibility")
@@ -536,7 +543,9 @@ export default function MeasurementPage() {
             gender: selectedMember.gender,
             height: selectedMember.height,
             weight: selectedMember.weight,
+            notes: selectedMember.notes,
           }}
+          measurementData={currentMeasurementData}
           onClose={handleCloseEvaluation}
         />
       )}

@@ -46,10 +46,9 @@
 
 /* EvaluationModal 인쇄 스타일 */
 @media print {
-  /* 페이지 설정 */
   @page {
-    size: A4 landscape;
-    margin: 10mm;
+    size: A4;
+    margin: 15mm;
   }
 
   body {
@@ -61,37 +60,37 @@
     visibility: hidden !important;
   }
 
-  /* EvaluationModal만 표시 */
+  /* 평가 모달만 표시 */
   .evaluation-modal-overlay,
   .evaluation-modal-overlay * {
     visibility: visible !important;
   }
 
-  /* overlay는 print에서 static */
+  /* overlay는 페이지 기준으로 고정 */
   .evaluation-modal-overlay {
-    position: static !important;
+    position: absolute !important;
+    top: 0;
+    left: 0;
+    width: 100%;
     background: white !important;
     padding: 0 !important;
   }
 
-  /* 컨테이너 - 핵심: scale */
+  /* 모달 컨테이너 */
   .evaluation-modal-container {
-    position: static !important;
-    width: 111% !important; /* scale 보정 */
-    max-width: none !important;
+    position: relative !important;
+    width: 100% !important;
+    max-width: 100% !important;
     height: auto !important;
+    max-height: none !important;
     margin: 0 !important;
     padding: 0 !important;
     box-shadow: none !important;
     border-radius: 0 !important;
     background: white !important;
-
-    transform: scale(0.9); /* ⭐ 핵심 */
-    transform-origin: top left;
-    page-break-inside: avoid !important;
   }
 
-  /* 인쇄 제외 요소 */
+  /* 인쇄 제외 */
   .no-print {
     display: none !important;
   }
@@ -101,7 +100,7 @@
     display: block !important;
   }
 
-  /* 스크롤 완전 제거 */
+  /* 스크롤 제거 */
   .print-area,
   .print-area * {
     overflow: visible !important;
@@ -109,35 +108,25 @@
     max-height: none !important;
   }
 
-  /* 레이아웃 유지 (가로) */
+  /* 레이아웃 단일 컬럼 */
   .evaluation-modal-content {
-    display: flex !important;
-    gap: 12px !important;
+    display: block !important;
+    padding: 0 !important;
   }
 
-  .evaluation-modal-left {
-    flex: 1 !important;
-  }
-
+  .evaluation-modal-left,
   .evaluation-modal-right {
-    width: 300px !important;
-    flex-shrink: 0 !important;
+    width: 100% !important;
   }
 
-  /* 차트 높이 제한 (진짜 중요) */
-  .evaluation-modal-chart {
-    max-height: 260px !important;
-    page-break-inside: avoid;
-  }
-
-  /* 테이블 / 카드 페이지 분리 방지 */
+  /* 페이지 분리 방지 */
+  .evaluation-modal-chart,
   .evaluation-modal-card,
-  .evaluation-modal-table-container,
-  .evaluation-modal-table tr {
+  .evaluation-modal-table-container {
     page-break-inside: avoid;
   }
 
-  /* 색상/배경 강제 */
+  /* 텍스트/배경 */
   .evaluation-modal-content * {
     color: #000 !important;
     background: white !important;

@@ -157,7 +157,7 @@ export default function RegisterPage() {
       setShowMoreInjuries(false);
 
       // 확인 다이얼로그 표시
-      const shouldNavigate = window.confirm("회원정보등록을 완료하면 회원측정페이지로 이동하시겠습니까?");
+      const shouldNavigate = window.confirm("회원측정페이지로 이동하시겠습니까?");
       if (shouldNavigate) {
         router.push("/measurement");
       } else {

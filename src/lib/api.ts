@@ -21,12 +21,13 @@ api.interceptors.request.use(
   (config) => {
     // 클라이언트 사이드에서만 실행
     if (typeof window !== "undefined") {
-      const token = localStorage.getItem("accessToken");
+      // sessionStorage에서 토큰 가져오기 (로그인 시 sessionStorage에 저장됨)
+      const token = sessionStorage.getItem("accessToken");
       if (token) {
         config.headers.Authorization = `Bearer ${token}`;
         devLog("토큰 추가됨:", token.substring(0, 20) + "...");
       } else {
-        devError("토큰이 없습니다!");
+        devError("토큰이 없습니다! (sessionStorage 확인)");
       }
     }
     return config;
@@ -194,6 +195,9 @@ api.interceptors.response.use(
     // 갱신 성공 시 Authorization 헤더 업데이트 후 요청 재시도
     originalRequest.headers = originalRequest.headers || {};
     originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
+
+    // 새로운 토큰을 sessionStorage에도 저장 (이미 saveTokensToStorage에서 처리됨)
+    devLog("토큰 갱신 후 요청 재시도");
 
     return api(originalRequest);
   }

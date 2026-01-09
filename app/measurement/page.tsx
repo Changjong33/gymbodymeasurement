@@ -5,8 +5,8 @@ import { useMemberStore } from "@/store/memberStore";
 import { useMeasurementStore } from "@/store/measurementStore";
 import { useAuthStore } from "@/store/authStore";
 import { useRouter } from "next/navigation";
-import { calculateMeasurementsApi, CalculateMeasurementsResponse } from "@/lib/api";
-import { generateEvaluationFromApiResponse, generateEvaluation, generateMockMeasurementsResponse, EvaluationResult } from "@/lib/evaluationUtils";
+import { calculateMeasurementsApi, MeasurementResult } from "@/lib/api";
+import { generateMockMeasurementsResponse } from "@/lib/evaluationUtils";
 import { convertFormDataToMeasurement, convertMeasurementToApiRequest } from "@/lib/measurementUtils";
 import { ExerciseType, BaseSection } from "@/types/exercise";
 import { weightTrainingSections } from "./WeightTrainingSection";
@@ -30,9 +30,7 @@ export default function MeasurementPage() {
   const [showSuccess, setShowSuccess] = useState(false);
   const [showMeasurementForm, setShowMeasurementForm] = useState(false);
   const [showEvaluation, setShowEvaluation] = useState(false);
-  const [evaluationResult, setEvaluationResult] = useState<EvaluationResult | null>(null);
-  const [apiResponseResults, setApiResponseResults] = useState<any[]>([]);
-  const [apiResponseData, setApiResponseData] = useState<CalculateMeasurementsResponse | null>(null);
+  const [apiResponseResults, setApiResponseResults] = useState<MeasurementResult[]>([]);
   const [formValid, setFormValid] = useState(false);
 
   // 실제 인증 상태 가져오기 (개발 모드 우회 포함)
@@ -262,12 +260,9 @@ export default function MeasurementPage() {
       // 로컬 스토어에 저장
       addMeasurement(measurementData);
 
-      // 총평 생성 (API 응답이 있으면 API 기반, 없으면 기존 방식)
-      const evaluation = apiResponse ? generateEvaluationFromApiResponse(selectedMember, apiResponse, measurementData) : generateEvaluation(selectedMember, measurementData);
-
-      setEvaluationResult(evaluation);
-      setApiResponseResults(apiResponse?.data?.results || []);
-      setApiResponseData(apiResponse || null);
+      // 백엔드 응답 결과 저장
+      const results = apiResponse?.data?.results || [];
+      setApiResponseResults(results);
       setIsSubmitting(false);
       setShowMeasurementForm(false);
       setShowEvaluation(true);
@@ -278,18 +273,13 @@ export default function MeasurementPage() {
         const measurementDataWithWeight = { ...measurementData, memberWeight: selectedMember.weight };
         const mockResponse = generateMockMeasurementsResponse(measurementDataWithWeight, selectedExerciseTypes);
         addMeasurement(measurementData);
-        const evaluation = generateEvaluationFromApiResponse(selectedMember, mockResponse, measurementData);
-        setEvaluationResult(evaluation);
-        setApiResponseResults(mockResponse.data.results);
+        setApiResponseResults(mockResponse.data.results || []);
         setIsSubmitting(false);
         setShowMeasurementForm(false);
         setShowEvaluation(true);
       } catch (fallbackError) {
-        // 최후의 수단: 기존 방식
-        console.error("Mock 데이터 생성 실패, 기존 방식 사용:", fallbackError);
+        console.error("Mock 데이터 생성 실패:", fallbackError);
         addMeasurement(measurementData);
-        const evaluation = generateEvaluation(selectedMember, measurementData);
-        setEvaluationResult(evaluation);
         setApiResponseResults([]);
         setIsSubmitting(false);
         setShowMeasurementForm(false);
@@ -300,9 +290,7 @@ export default function MeasurementPage() {
 
   const handleCloseEvaluation = () => {
     setShowEvaluation(false);
-    setEvaluationResult(null);
     setApiResponseResults([]);
-    setApiResponseData(null);
     setShowSuccess(true);
     setSelectedMemberId("");
     setSelectedExerciseTypes([]);
@@ -465,12 +453,10 @@ export default function MeasurementPage() {
         </div>
       </div>
 
-      {/* 총평 모달 */}
-      {showEvaluation && evaluationResult && selectedMember && (
+      {/* 측정 결과 모달 */}
+      {showEvaluation && selectedMember && apiResponseResults.length > 0 && (
         <EvaluationModal
-          evaluationResult={evaluationResult}
-          apiResults={apiResponseResults}
-          apiResponse={apiResponseData || undefined}
+          results={apiResponseResults}
           selectedExerciseTypes={selectedExerciseTypes}
           member={{
             name: selectedMember.name,

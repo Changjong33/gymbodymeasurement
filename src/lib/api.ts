@@ -415,12 +415,13 @@ export interface CalculateMeasurementsRequest {
   measurements: MeasurementItem[];
 }
 
+// 간소화된 측정 결과 인터페이스
 export interface AdjustedLevels {
-  beginner?: number;
-  novice?: number;
-  intermediate?: number;
-  advanced?: number;
-  elite?: number;
+  beginner: number;
+  novice: number;
+  intermediate: number;
+  advanced: number;
+  elite: number;
 }
 
 export interface MeasurementResult {
@@ -428,13 +429,8 @@ export interface MeasurementResult {
   exerciseName: string;
   value: number;
   unit: string;
-  level: string;
-  score: number;
-  nextLevel: string;
-  nextLevelTarget: number;
-  remaining: number;
-  adjustedLevels?: AdjustedLevels;
-  trainerFeedback?: string;
+  score: number; // 1~5
+  adjustedLevels: AdjustedLevels;
 }
 
 export interface TotalSummary {
